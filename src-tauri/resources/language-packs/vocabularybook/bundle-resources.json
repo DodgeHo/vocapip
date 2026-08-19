@@ -1,0 +1,21 @@
+{
+  "description": "Suggested Tauri bundle resource mapping; main-thread integration must add these paths to tauri.conf.json.",
+  "excluded": [
+    "vocabularybook/wallhaven-0p1z90.png"
+  ],
+  "resources": [
+    "resources/language-packs/vocabularybook/catalog.json",
+    "resources/language-packs/vocabularybook/LICENSE",
+    "resources/language-packs/vocabularybook/SHA256SUMS",
+    "resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-middle-school.json",
+    "resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-high-school.json",
+    "resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-cet4.json",
+    "resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-cet6.json",
+    "resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-postgraduate.json",
+    "resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-toefl.json",
+    "resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-sat.json"
+  ],
+  "runtimeExpectation": "The Rust resource loader must accept schemaVersion 2 and nullable phonetic/example/frequencyRank fields; no placeholder values may be substituted.",
+  "schemaVersion": 1,
+  "sourceAttribution": "KyleBing/english-vocabulary@66f4a6db7b61eab3534d7b84f10eed312bca4ed6"
+}

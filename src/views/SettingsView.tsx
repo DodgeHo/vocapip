@@ -1,13 +1,83 @@
+import { ImagePlus, RotateCcw, Trash2, Upload } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AppShell } from "../components/AppShell";
+import { PetAppearancePreview } from "../components/PetCharacter";
 import { Toggle } from "../components/Toggle";
 import { zhCN } from "../i18n/zh-CN";
 import { api } from "../lib/api";
 import type {
   AppSettings,
   BootstrapPayload,
+  CustomPetAssets,
   LicenseDocument,
+  PetAppearanceId,
+  PetAssetState,
 } from "../lib/types";
+
+const MAX_CUSTOM_PET_BYTES = 5 * 1024 * 1024;
+const MAX_CUSTOM_PET_DIMENSION = 4096;
+const supportedPetImageTypes = new Set([
+  "image/png",
+  "image/jpeg",
+  "image/webp",
+]);
+const petAppearances: PetAppearanceId[] = [
+  "mint",
+  "coral",
+  "sun",
+  "night",
+  "custom",
+];
+const customPetSlots: PetAssetState[] = [
+  "default",
+  "idle",
+  "click",
+  "error",
+  "correct",
+  "upgrade",
+];
+
+function readFileAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () =>
+      typeof reader.result === "string"
+        ? resolve(reader.result)
+        : reject(new Error(zhCN.settings.petImageReadError));
+    reader.onerror = () => reject(new Error(zhCN.settings.petImageReadError));
+    reader.readAsDataURL(file);
+  });
+}
+
+function readImageDimensions(
+  dataUrl: string,
+): Promise<{ width: number; height: number }> {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () =>
+      resolve({ width: image.naturalWidth, height: image.naturalHeight });
+    image.onerror = () => reject(new Error(zhCN.settings.petImageReadError));
+    image.src = dataUrl;
+  });
+}
+
+export async function validateCustomPetFile(file: File): Promise<string> {
+  if (!supportedPetImageTypes.has(file.type))
+    throw new Error(zhCN.settings.petImageTypeError);
+  if (file.size > MAX_CUSTOM_PET_BYTES)
+    throw new Error(zhCN.settings.petImageSizeError);
+  const dataUrl = await readFileAsDataUrl(file);
+  const { width, height } = await readImageDimensions(dataUrl);
+  if (
+    width < 1 ||
+    height < 1 ||
+    width > MAX_CUSTOM_PET_DIMENSION ||
+    height > MAX_CUSTOM_PET_DIMENSION
+  )
+    throw new Error(zhCN.settings.petImageDimensionError);
+  return dataUrl;
+}
+
 export function SettingsView() {
   const [data, setData] = useState<BootstrapPayload | null>(null);
   const [settings, setSettings] = useState<AppSettings | null>(null);
@@ -15,12 +85,14 @@ export function SettingsView() {
   const [licenseOpen, setLicenseOpen] = useState(false);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [customAssets, setCustomAssets] = useState<CustomPetAssets>({});
+  const [petImageError, setPetImageError] = useState("");
   useEffect(() => {
-    void api
-      .bootstrap()
-      .then((next) => {
+    void Promise.all([api.bootstrap(), api.getPetAssets()])
+      .then(([next, assets]) => {
         setData(next);
         setSettings(next.settings);
+        setCustomAssets(assets);
       })
       .catch(() => setError(zhCN.common.unknownError));
   }, []);
@@ -88,6 +160,74 @@ export function SettingsView() {
       setError(zhCN.common.unknownError);
     }
   };
+  const choosePetAppearance = async (appearanceId: PetAppearanceId) => {
+    const previous = settings?.petAppearanceId ?? "mint";
+    patch({ petAppearanceId: appearanceId });
+    try {
+      const applied = await api.setPetAppearance(appearanceId);
+      patch({ petAppearanceId: applied });
+      setStatus(zhCN.settings.appliedImmediately);
+      setError("");
+    } catch {
+      patch({ petAppearanceId: previous });
+      setError(zhCN.common.unknownError);
+    }
+  };
+  const uploadCustomPet = async (
+    state: PetAssetState,
+    file: File | undefined,
+  ) => {
+    if (!file) return;
+    setPetImageError("");
+    try {
+      const dataUrl = await validateCustomPetFile(file);
+      const saved = await api.importPetImage(state, dataUrl);
+      setCustomAssets((current) => ({
+        ...current,
+        [state]: saved.dataUrl,
+      }));
+      await choosePetAppearance("custom");
+      setStatus(zhCN.settings.petImageReady);
+    } catch (cause) {
+      setPetImageError(
+        cause instanceof Error
+          ? cause.message
+          : zhCN.settings.petImageReadError,
+      );
+    }
+  };
+  const removeCustomPetImage = async (state: PetAssetState) => {
+    try {
+      await api.removePetImage(state);
+      const remainingAssets = Object.entries(customAssets).filter(
+        ([assetState, dataUrl]) => assetState !== state && Boolean(dataUrl),
+      );
+      setCustomAssets((current) => {
+        const next = { ...current };
+        delete next[state];
+        return next;
+      });
+      if (settings?.petAppearanceId === "custom" && !remainingAssets.length)
+        await choosePetAppearance("mint");
+      setPetImageError("");
+      setStatus(zhCN.settings.petImageRemoved);
+    } catch {
+      setPetImageError(zhCN.common.unknownError);
+    }
+  };
+  const clearCustomPet = async () => {
+    try {
+      await Promise.all(
+        customPetSlots.map((state) => api.removePetImage(state)),
+      );
+      setCustomAssets({});
+      await choosePetAppearance("mint");
+      setPetImageError("");
+      setStatus(zhCN.settings.petImagesRemoved);
+    } catch {
+      setPetImageError(zhCN.common.unknownError);
+    }
+  };
   if (!settings || !data)
     return (
       <AppShell active="settings">
@@ -97,6 +237,7 @@ export function SettingsView() {
   const pack = data.languagePacks.find(
     (item) => item.id === settings.languagePackId,
   );
+  const hasCustomAssets = customPetSlots.some((state) => customAssets[state]);
   return (
     <AppShell active="settings">
       <header className="page-header">
@@ -189,6 +330,148 @@ export function SettingsView() {
               </label>
             </div>
           </div>
+        </section>
+        <section className="settings-section">
+          <h2>{zhCN.settings.speech}</h2>
+          <div className="setting-row">
+            <div>
+              <label>{zhCN.settings.speechAutoRead}</label>
+              <p>{zhCN.settings.speechHelp}</p>
+            </div>
+            <Toggle
+              label={zhCN.settings.speechAutoRead}
+              checked={settings.speechEnabled}
+              onChange={(checked) => patch({ speechEnabled: checked })}
+            />
+          </div>
+        </section>
+        <section className="settings-section pet-appearance-section">
+          <h2>{zhCN.settings.petAppearance}</h2>
+          <p className="section-help">{zhCN.settings.petAppearanceHelp}</p>
+          <div
+            className="appearance-picker"
+            role="radiogroup"
+            aria-label={zhCN.settings.petAppearance}
+          >
+            {petAppearances.map((appearance) => (
+              <button
+                type="button"
+                role="radio"
+                aria-checked={settings.petAppearanceId === appearance}
+                disabled={appearance === "custom" && !hasCustomAssets}
+                className={
+                  "appearance-option" +
+                  (settings.petAppearanceId === appearance
+                    ? " is-selected"
+                    : "")
+                }
+                onClick={() => void choosePetAppearance(appearance)}
+                key={appearance}
+              >
+                {appearance === "custom" && !hasCustomAssets ? (
+                  <span
+                    className="appearance-upload-placeholder"
+                    aria-hidden="true"
+                  >
+                    <ImagePlus size={27} />
+                  </span>
+                ) : (
+                  <PetAppearancePreview
+                    appearanceId={appearance}
+                    customAssets={customAssets}
+                  />
+                )}
+                <span>{zhCN.settings.petAppearances[appearance]}</span>
+              </button>
+            ))}
+          </div>
+          <div className="custom-pet-heading">
+            <strong>{zhCN.settings.customPetImage}</strong>
+            <p>{zhCN.settings.customPetImageHelp}</p>
+          </div>
+          <div className="custom-pet-slots">
+            {customPetSlots.map((state) => {
+              const uploadLabel = zhCN.settings.uploadPetImageFor.replace(
+                "{state}",
+                zhCN.settings.customPetSlots[state],
+              );
+              const asset = customAssets[state];
+              return (
+                <div className="custom-pet-slot" key={state}>
+                  <div className="custom-pet-slot-preview">
+                    {asset ? (
+                      <PetAppearancePreview
+                        appearanceId="custom"
+                        customAssets={{ [state]: asset }}
+                        mood={state === "default" ? "idle" : state}
+                      />
+                    ) : (
+                      <ImagePlus aria-hidden="true" size={24} />
+                    )}
+                  </div>
+                  <div className="custom-pet-slot-copy">
+                    <strong>{zhCN.settings.customPetSlots[state]}</strong>
+                    <span>{zhCN.settings.customPetSlotHelp[state]}</span>
+                  </div>
+                  <div className="custom-pet-slot-actions">
+                    <label
+                      className="icon-button"
+                      htmlFor={`custom-pet-image-${state}`}
+                      title={uploadLabel}
+                    >
+                      <Upload aria-hidden="true" size={16} />
+                      <span className="visually-hidden">{uploadLabel}</span>
+                    </label>
+                    <input
+                      id={`custom-pet-image-${state}`}
+                      className="visually-hidden"
+                      type="file"
+                      accept="image/png,image/jpeg,image/webp"
+                      aria-label={uploadLabel}
+                      onChange={(event) => {
+                        void uploadCustomPet(state, event.target.files?.[0]);
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                    {asset && (
+                      <button
+                        type="button"
+                        className="icon-button"
+                        title={`${zhCN.settings.removePetImage}：${zhCN.settings.customPetSlots[state]}`}
+                        aria-label={`${zhCN.settings.removePetImage}：${zhCN.settings.customPetSlots[state]}`}
+                        onClick={() => void removeCustomPetImage(state)}
+                      >
+                        <Trash2 aria-hidden="true" size={16} />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          <div className="custom-pet-footer-actions">
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void choosePetAppearance("mint")}
+            >
+              <RotateCcw aria-hidden="true" size={16} />
+              {zhCN.settings.restoreSystemPet}
+            </button>
+            {hasCustomAssets && (
+              <button
+                type="button"
+                className="secondary danger-action"
+                onClick={() => void clearCustomPet()}
+              >
+                <Trash2 aria-hidden="true" size={16} />
+                {zhCN.settings.removeAllPetImages}
+              </button>
+            )}
+          </div>
+          {petImageError && (
+            <p className="inline-error pet-image-error">{petImageError}</p>
+          )}
         </section>
         <section className="settings-section">
           <h2>{zhCN.settings.desktop}</h2>

@@ -33,3 +33,7 @@ Every published record contains a stable id, word, part of speech, Chinese gloss
 ## Compliance notes
 
 The pack's collection license does not remove attribution or share-alike obligations from the underlying sources. Redistributors must retain the notices and follow each source's license. The content pipeline is fail-closed and does not publish records whose license or sense alignment cannot be established.
+
+## vocabularybook/ word-list data
+
+The seven `vocabularybook/*.txt` word lists (初中 / 高中 / 四级 / 六级 / 考研 / 托福 / SAT) are byte-for-byte identical to the files of the same names in KyleBing/english-vocabulary at commit 66f4a6db7b61eab3534d7b84f10eed312bca4ed6. The upstream author, KyleBing, has granted VocaPip and its users a perpetual, worldwide, royalty-free, non-exclusive license to use, modify, and distribute the files, including for commercial purposes, subject to attribution. See `vocabularybook/LICENSE` for the full grant. That grant covers only the upstream author's own rights: the files derive from the chain kajweb/dict → KyleBing/dict → KyleBing/english-vocabulary, and any upstream rights remain with their respective owners.

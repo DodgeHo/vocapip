@@ -159,8 +159,8 @@ export function LibraryView() {
                 </div>
               </div>
               <div className="word-example">
-                <p>{card.exampleEn}</p>
-                <span>{card.exampleZh}</span>
+                <p>{card.exampleEn || zhCN.library.noExample}</p>
+                <span>{card.exampleZh || zhCN.library.noExample}</span>
               </div>
               <div className="word-meta">
                 <span className={"status status-" + card.status}>

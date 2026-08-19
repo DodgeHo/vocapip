@@ -4,7 +4,9 @@ mod commands;
 mod db;
 mod error;
 mod models;
+mod pet_assets;
 mod repository;
+mod speech;
 mod xp;
 
 use app::{LifecycleState, PetSurfaceMode, PetSurfaceState, MAIN_WINDOW};
@@ -131,6 +133,13 @@ pub fn run() {
             commands::get_license_documents,
             commands::set_pet_surface_mode,
             commands::show_pet_context_menu,
+            commands::speak_text,
+            commands::stop_speaking,
+            commands::list_pet_appearances,
+            commands::import_pet_image,
+            commands::remove_pet_image,
+            commands::get_pet_asset,
+            commands::set_pet_appearance,
         ])
         .run(tauri::generate_context!())
         .expect("error while running VocaPip");

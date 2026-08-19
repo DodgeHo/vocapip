@@ -1,5 +1,5 @@
 import { listen } from "@tauri-apps/api/event";
-import { EyeOff, Pin, PinOff, X } from "lucide-react";
+import { EyeOff, Pin, PinOff, Volume2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Placement } from "../components/Placement";
 import { PetCharacter } from "../components/PetCharacter";
@@ -9,6 +9,7 @@ import { api } from "../lib/api";
 import { formatInterval, previewReview, scheduleReview } from "../lib/fsrs";
 import type {
   BootstrapPayload,
+  CustomPetAssets,
   LearningCard,
   PetBubbleSide,
   PetMood,
@@ -33,6 +34,7 @@ function getPetAction(payload: PetActionPayload): string {
 
 export function PetView() {
   const [data, setData] = useState<BootstrapPayload | null>(null);
+  const [customAssets, setCustomAssets] = useState<CustomPetAssets>({});
   const [card, setCard] = useState<LearningCard | null>(null);
   const [bubbleOpen, setBubbleOpen] = useState(false);
   const [progressOpen, setProgressOpen] = useState(false);
@@ -47,9 +49,13 @@ export function PetView() {
 
   const load = async () => {
     try {
-      const next = await api.bootstrap();
+      const [next, assets] = await Promise.all([
+        api.bootstrap(),
+        api.getPetAssets(),
+      ]);
       setData(next);
       setCard(next.currentCard ?? null);
+      setCustomAssets(assets);
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : zhCN.common.unknownError,
@@ -97,6 +103,19 @@ export function PetView() {
     setBubbleOpen(true);
     window.setTimeout(() => setMood("idle"), 420);
   };
+
+  useEffect(() => {
+    const word = card?.word;
+    if (!bubbleOpen || !word || !data?.settings.speechEnabled) return;
+    let cancelled = false;
+    void api.speakText(word).catch(() => {
+      if (!cancelled) setError(zhCN.pet.speechError);
+    });
+    return () => {
+      cancelled = true;
+      void api.stopSpeaking();
+    };
+  }, [bubbleOpen, card?.id, card?.word, data?.settings.speechEnabled]);
 
   useEffect(() => {
     if (!("__TAURI_INTERNALS__" in window)) return;
@@ -198,6 +217,7 @@ export function PetView() {
   };
 
   const closeLearning = () => {
+    void api.stopSpeaking();
     setBubbleOpen(false);
     setRevealed(false);
     setFeedback("");
@@ -207,6 +227,7 @@ export function PetView() {
 
   const submit = async (rating: ReviewRating) => {
     if (!card || !data) return;
+    void api.stopSpeaking();
     setBusy(true);
     setError("");
     const now = new Date();
@@ -302,6 +323,8 @@ export function PetView() {
             </div>
             <PetCharacter
               mood={mood}
+              appearanceId={data.settings.petAppearanceId}
+              customAssets={customAssets}
               onActivate={openLearning}
               onRequestDrag={() => api.startPetDrag()}
               onContextMenu={() => void api.showPetContextMenu()}
@@ -319,7 +342,7 @@ export function PetView() {
               xpFeedback={xpFeedback}
               leveledUp={leveledUp}
               onToggle={() => {
-                setBubbleOpen(false);
+                closeLearning();
                 setProgressOpen((open) => !open);
               }}
               onClose={() => setProgressOpen(false)}
@@ -353,9 +376,26 @@ export function PetView() {
                   </header>
                   <div className="word-line">
                     <h1>{card.word}</h1>
-                    <span>{card.phonetic}</span>
+                    <span className="word-pronunciation">
+                      {card.phonetic && <span>{card.phonetic}</span>}
+                      <button
+                        type="button"
+                        className="icon-button speech-button"
+                        aria-label={zhCN.pet.speakWord}
+                        title={zhCN.pet.speakWord}
+                        onClick={() => {
+                          void api.speakText(card.word).catch(() => {
+                            setError(zhCN.pet.speechError);
+                          });
+                        }}
+                      >
+                        <Volume2 aria-hidden="true" size={18} />
+                      </button>
+                    </span>
                   </div>
-                  <p className="example-en">{card.exampleEn}</p>
+                  <p className="example-en">
+                    {card.exampleEn || zhCN.pet.noExample}
+                  </p>
                   {!revealed ? (
                     <button
                       type="button"
@@ -368,7 +408,7 @@ export function PetView() {
                     <>
                       <div className="answer-block">
                         <strong>{card.definitionZh}</strong>
-                        <p>{card.exampleZh}</p>
+                        <p>{card.exampleZh || zhCN.pet.noExample}</p>
                       </div>
                       <div className="rating-grid">
                         {ratings.map((rating) => (

@@ -604,6 +604,8 @@ mod tests {
             always_on_top: true,
             language_pack_id: "zh-CN__en.pilot".into(),
             reminders_paused: false,
+            speech_enabled: false,
+            pet_appearance_id: "mint".into(),
             quiet_mode_until: None,
         }
     }

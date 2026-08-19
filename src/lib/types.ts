@@ -1,6 +1,25 @@
 export type LevelBand = "T1" | "T2" | "T3" | "T4" | "T5";
 export type ReviewRating = "again" | "hard" | "good" | "easy";
 export type PetMood = "idle" | "click" | "error" | "correct" | "upgrade";
+export type PetAppearanceId = "mint" | "coral" | "sun" | "night" | "custom";
+export type PetAssetState = "default" | PetMood;
+export type CustomPetAssets = Partial<Record<PetAssetState, string>>;
+export interface PetAppearanceSummary {
+  id: PetAppearanceId;
+  bundled: boolean;
+  selected?: boolean;
+  availableStates?: PetAssetState[];
+}
+export interface PetAssetRecord {
+  state: PetAssetState;
+  dataUrl: string;
+  id?: string;
+  appearanceId?: PetAppearanceId;
+  mimeType?: string;
+  width?: number;
+  height?: number;
+  updatedAt?: string;
+}
 export type PetSurfaceMode = "idle" | "learning" | "progress" | "placement";
 export type PetBubbleSide = "above" | "below";
 export interface PetSurfaceLayout {
@@ -68,6 +87,8 @@ export interface AppSettings {
   alwaysOnTop: boolean;
   languagePackId: string;
   remindersPaused: boolean;
+  speechEnabled: boolean;
+  petAppearanceId: PetAppearanceId;
   quietModeUntil?: string;
 }
 export interface BootstrapPayload {

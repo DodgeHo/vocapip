@@ -1,0 +1,147 @@
+{
+  "categories": [
+    {
+      "bytes": 2632889,
+      "category": {
+        "displayName": "初中",
+        "id": "middle-school",
+        "order": 1,
+        "suggestedTier": "T1",
+        "tierIsDerived": true
+      },
+      "conflictingDuplicateDefinitionCount": 1233,
+      "duplicateLineCount": 1236,
+      "extraColumnLineCount": 0,
+      "id": "zh-CN__en.vocabularybook.middle-school",
+      "recordCount": 1987,
+      "resource": "zh-CN-en-vocabularybook-middle-school.json",
+      "sha256": "e78fa620bfcb9534ba3c8ac47ce0d0dd7b1400459ef6a5568b41858b866858c6",
+      "sourceLineCount": 3223
+    },
+    {
+      "bytes": 4937301,
+      "category": {
+        "displayName": "高中",
+        "id": "high-school",
+        "order": 2,
+        "suggestedTier": "T2",
+        "tierIsDerived": true
+      },
+      "conflictingDuplicateDefinitionCount": 2262,
+      "duplicateLineCount": 2265,
+      "extraColumnLineCount": 0,
+      "id": "zh-CN__en.vocabularybook.high-school",
+      "recordCount": 3743,
+      "resource": "zh-CN-en-vocabularybook-high-school.json",
+      "sha256": "ed99995d507c6f95bfcc694ecd29a36ac9600aa1145eb775889dbe2955719042",
+      "sourceLineCount": 6008
+    },
+    {
+      "bytes": 5765175,
+      "category": {
+        "displayName": "四级",
+        "id": "cet4",
+        "order": 3,
+        "suggestedTier": "T2",
+        "tierIsDerived": true
+      },
+      "conflictingDuplicateDefinitionCount": 2848,
+      "duplicateLineCount": 2965,
+      "extraColumnLineCount": 0,
+      "id": "zh-CN__en.vocabularybook.cet4",
+      "recordCount": 4543,
+      "resource": "zh-CN-en-vocabularybook-cet4.json",
+      "sha256": "1030721b58c85208369195a9b5d671a4b6337eed1e224d32c9a7105c0e6d89bd",
+      "sourceLineCount": 7508
+    },
+    {
+      "bytes": 5074063,
+      "category": {
+        "displayName": "六级",
+        "id": "cet6",
+        "order": 4,
+        "suggestedTier": "T3",
+        "tierIsDerived": true
+      },
+      "conflictingDuplicateDefinitionCount": 1626,
+      "duplicateLineCount": 1660,
+      "extraColumnLineCount": 2,
+      "id": "zh-CN__en.vocabularybook.cet6",
+      "recordCount": 3991,
+      "resource": "zh-CN-en-vocabularybook-cet6.json",
+      "sha256": "1f16ad33ed70892dc1475a3ecd587492de800d8b22b00b9660dc1933b6c333c1",
+      "sourceLineCount": 5651
+    },
+    {
+      "bytes": 6631386,
+      "category": {
+        "displayName": "考研",
+        "id": "postgraduate",
+        "order": 5,
+        "suggestedTier": "T3",
+        "tierIsDerived": true
+      },
+      "conflictingDuplicateDefinitionCount": 4459,
+      "duplicateLineCount": 4555,
+      "extraColumnLineCount": 0,
+      "id": "zh-CN__en.vocabularybook.postgraduate",
+      "recordCount": 5047,
+      "resource": "zh-CN-en-vocabularybook-postgraduate.json",
+      "sha256": "82dacfec7dbccd612a0f1028539f7c41efb32229811c36e23e128130c8281d6d",
+      "sourceLineCount": 9602
+    },
+    {
+      "bytes": 13176164,
+      "category": {
+        "displayName": "托福",
+        "id": "toefl",
+        "order": 6,
+        "suggestedTier": "T4",
+        "tierIsDerived": true
+      },
+      "conflictingDuplicateDefinitionCount": 3109,
+      "duplicateLineCount": 3110,
+      "extraColumnLineCount": 0,
+      "id": "zh-CN__en.vocabularybook.toefl",
+      "recordCount": 10367,
+      "resource": "zh-CN-en-vocabularybook-toefl.json",
+      "sha256": "1f37efd21cf9df28816afafdfc820ca5681f43594e16ec10d3320196a9dcc96b",
+      "sourceLineCount": 13477
+    },
+    {
+      "bytes": 5699880,
+      "category": {
+        "displayName": "SAT",
+        "id": "sat",
+        "order": 7,
+        "suggestedTier": "T5",
+        "tierIsDerived": true
+      },
+      "conflictingDuplicateDefinitionCount": 4421,
+      "duplicateLineCount": 4423,
+      "extraColumnLineCount": 2,
+      "id": "zh-CN__en.vocabularybook.sat",
+      "recordCount": 4464,
+      "resource": "zh-CN-en-vocabularybook-sat.json",
+      "sha256": "8d792f2a0e72a09f00efb3fcb8870ea26d8591684391b1c09d17def090a7a605",
+      "sourceLineCount": 8887
+    }
+  ],
+  "categoryCount": 7,
+  "compatibilityVersion": "2",
+  "id": "zh-CN__en.vocabularybook.catalog",
+  "licenseResource": "LICENSE",
+  "licenseSha256": "86684be7e0d4efbc53c422e05cceab0031f8ebe5b0c6a32a4b042bc75971e1f1",
+  "packLicense": "LicenseRef-KyleBing-English-Vocabulary-Explicit-Grant",
+  "packVersion": "2026.08.19",
+  "recordCount": 34142,
+  "schemaVersion": 1,
+  "sourceCommit": "66f4a6db7b61eab3534d7b84f10eed312bca4ed6",
+  "sourceLineCount": 54356,
+  "sourceRepository": "KyleBing/english-vocabulary",
+  "upstreamChain": [
+    "kajweb/dict",
+    "KyleBing/dict",
+    "KyleBing/english-vocabulary"
+  ]
+}

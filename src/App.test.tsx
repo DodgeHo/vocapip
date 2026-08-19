@@ -9,11 +9,16 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getView } from "./App";
-import { PetCharacter } from "./components/PetCharacter";
+import { api } from "./lib/api";
+import { PetCharacter, resolveCustomPetImage } from "./components/PetCharacter";
 import { LibraryView } from "./views/LibraryView";
 import { PetView } from "./views/PetView";
 import { SettingsView } from "./views/SettingsView";
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 beforeEach(() => localStorage.clear());
 describe("view routing", () => {
   it("selects each supported URL and falls back to pet", () => {
@@ -114,6 +119,31 @@ describe("pet pointer interactions", () => {
     fireEvent.contextMenu(pet, { clientX: 12, clientY: 16 });
     expect(context).toHaveBeenCalledWith(12, 16);
   });
+
+  it("keeps system appearance classes and custom image fallback stable", () => {
+    const { container } = render(
+      <>
+        <PetCharacter mood="idle" appearanceId="coral" />
+        <PetCharacter
+          mood="correct"
+          appearanceId="custom"
+          customAssets={{ default: "data:image/png;base64,custom" }}
+        />
+      </>,
+    );
+
+    expect(container.querySelectorAll(".pet-appearance-coral")).toHaveLength(1);
+    expect(
+      container.querySelector(".pet-custom-image")?.getAttribute("src"),
+    ).toBe("data:image/png;base64,custom");
+    expect(
+      resolveCustomPetImage(
+        { default: "default", idle: "idle", correct: "correct" },
+        "correct",
+      ),
+    ).toBe("correct");
+    expect(resolveCustomPetImage(undefined, "idle")).toBeNull();
+  });
 });
 describe("library and settings", () => {
   it("filters the local demo library", async () => {
@@ -124,6 +154,130 @@ describe("library and settings", () => {
     expect(await screen.findByText("coherent")).toBeTruthy();
     await waitFor(() => expect(screen.queryByText("steady")).toBeNull());
   });
+
+  it("shows the local empty-example state in the library", async () => {
+    const card = {
+      id: "vocabularybook:middle-school:ab12",
+      word: "abandon",
+      phonetic: undefined,
+      partOfSpeech: "v.",
+      definitionZh: "放弃",
+      exampleEn: "",
+      exampleZh: "",
+      tier: "T1" as const,
+      frequencyRank: 0,
+      status: "new" as const,
+      favorite: false,
+    };
+    vi.spyOn(api, "listLibrary").mockResolvedValue({
+      items: [card],
+      counts: {
+        all: 1,
+        new: 1,
+        learning: 0,
+        review: 0,
+        relearning: 0,
+        favorite: 0,
+        recent: 0,
+      },
+    });
+
+    render(<LibraryView />);
+    expect((await screen.findAllByText("暂无本地例句")).length).toBe(2);
+  });
+
+  it("keeps speech and appearance settings in the editable settings model", async () => {
+    const user = userEvent.setup();
+    render(<SettingsView />);
+    await screen.findByRole("heading", { name: "学习节奏" });
+
+    const speech = screen.getByRole("switch", { name: "自动朗读单词" });
+    expect(speech.getAttribute("aria-checked")).toBe("false");
+    await user.click(speech);
+    expect(speech.getAttribute("aria-checked")).toBe("true");
+
+    const coral = screen.getByRole("radio", { name: "Coral" });
+    await user.click(coral);
+    expect(coral.getAttribute("aria-checked")).toBe("true");
+    await user.click(screen.getByRole("button", { name: "已立即应用" }));
+    await screen.findByText("已保存");
+
+    const saved = await api.bootstrap();
+    expect(saved.settings.speechEnabled).toBe(true);
+    expect(saved.settings.petAppearanceId).toBe("coral");
+  });
+
+  it("uses the speech command when the word speaker is pressed", async () => {
+    const user = userEvent.setup();
+    const speak = vi.spyOn(api, "speakText").mockResolvedValue();
+    await api.completePlacement({ selfReportedTier: "T2" });
+    render(<PetView />);
+
+    await user.click(
+      await screen.findByRole("button", { name: "点击 VocaPip 开始学习" }),
+    );
+    await user.click(screen.getByRole("button", { name: "朗读单词" }));
+    expect(speak).toHaveBeenCalledWith(expect.stringMatching(/steady|notice/));
+  });
+
+  it("automatically reads a card and stops when the bubble closes", async () => {
+    const user = userEvent.setup();
+    const current = await api.bootstrap();
+    await api.updateSettings({
+      ...current.settings,
+      speechEnabled: true,
+    });
+    await api.completePlacement({ selfReportedTier: "T2" });
+    const speak = vi.spyOn(api, "speakText").mockResolvedValue();
+    const stop = vi.spyOn(api, "stopSpeaking").mockResolvedValue();
+
+    render(<PetView />);
+    await user.click(
+      await screen.findByRole("button", { name: "点击 VocaPip 开始学习" }),
+    );
+    await waitFor(() =>
+      expect(speak).toHaveBeenCalledWith(
+        expect.stringMatching(/steady|notice/),
+      ),
+    );
+
+    await user.click(screen.getByRole("button", { name: "关闭" }));
+    expect(stop).toHaveBeenCalled();
+  });
+
+  it("uploads one custom image, selects it, and restores Mint after removal", async () => {
+    const user = userEvent.setup();
+    class MockImage {
+      naturalWidth = 256;
+      naturalHeight = 256;
+      onload?: () => void;
+      onerror?: () => void;
+
+      set src(_value: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    vi.stubGlobal("Image", MockImage);
+    render(<SettingsView />);
+    await screen.findByRole("heading", { name: "学习节奏" });
+
+    const file = new File(["pet"], "pet.png", { type: "image/png" });
+    await user.upload(screen.getByLabelText("上传通用图片"), file);
+
+    expect(await screen.findByText("图片已保存在本机并启用")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("radio", { name: "我的图片" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+
+    await user.click(screen.getByRole("button", { name: "删除图片：通用" }));
+    expect(await screen.findByText("图片已删除")).toBeTruthy();
+    expect(
+      screen.getByRole("radio", { name: "Mint" }).getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+
   it("loads editable offline settings and applies topmost changes immediately", async () => {
     const user = userEvent.setup();
     render(<SettingsView />);

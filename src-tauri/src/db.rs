@@ -7,8 +7,23 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 pub const DATABASE_APPLICATION_ID: i64 = 1_280_333_140;
-pub const DATABASE_VERSION: i64 = 4;
+pub const DATABASE_VERSION: i64 = 5;
 const BUILTIN_PACK: &str = include_str!("../resources/language-packs/zh-CN-en.json");
+const VOCABULARYBOOK_PACKS: &[&str] = &[
+    include_str!(
+        "../resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-middle-school.json"
+    ),
+    include_str!(
+        "../resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-high-school.json"
+    ),
+    include_str!("../resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-cet4.json"),
+    include_str!("../resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-cet6.json"),
+    include_str!(
+        "../resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-postgraduate.json"
+    ),
+    include_str!("../resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-toefl.json"),
+    include_str!("../resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-sat.json"),
+];
 const ALLOWED_RECORD_LICENSES: &[&str] = &[
     "CC0-1.0",
     "CC-BY-2.0-FR",
@@ -24,6 +39,10 @@ const MIGRATIONS: &[(i64, &str)] = &[
     (
         4,
         include_str!("../migrations/0004_default_not_always_on_top.sql"),
+    ),
+    (
+        5,
+        include_str!("../migrations/0005_speech_and_pet_assets.sql"),
     ),
 ];
 
@@ -45,12 +64,23 @@ impl DbState {
         let mut connection = state.connect()?;
         run_migrations(&mut connection)?;
         install_pack_json(&mut connection, BUILTIN_PACK)?;
+        for pack in VOCABULARYBOOK_PACKS {
+            install_pack_json(&mut connection, pack)?;
+        }
         Ok(state)
     }
 
     #[cfg(test)]
     pub fn path(&self) -> &Path {
         &self.path
+    }
+
+    #[cfg(test)]
+    pub fn for_test(path: PathBuf) -> Self {
+        Self {
+            path,
+            write_lock: Mutex::new(()),
+        }
     }
 
     pub fn connect(&self) -> AppResult<Connection> {
@@ -133,7 +163,7 @@ pub fn install_pack_json(connection: &mut Connection, json: &str) -> AppResult<(
 }
 
 fn validate_pack(pack: &LanguagePack) -> AppResult<()> {
-    if pack.schema_version != 1 {
+    if !matches!(pack.schema_version, 1 | 2) {
         return Err(AppError::InvalidData(format!(
             "unsupported language pack schema {}",
             pack.schema_version
@@ -154,6 +184,13 @@ fn validate_pack(pack: &LanguagePack) -> AppResult<()> {
                 "language pack metadata contains an empty field".into(),
             ));
         }
+    }
+    if pack.schema_version == 2
+        && pack.pack_license != "LicenseRef-KyleBing-English-Vocabulary-Explicit-Grant"
+    {
+        return Err(AppError::InvalidData(
+            "vocabularybook pack has an unexpected license".into(),
+        ));
     }
     if pack.records.is_empty() {
         return Err(AppError::InvalidData(
@@ -177,10 +214,7 @@ fn validate_record(record: &LanguageRecord) -> AppResult<()> {
     for (name, value) in [
         ("id", &record.id),
         ("word", &record.word),
-        ("partOfSpeech", &record.part_of_speech),
         ("definitionZh", &record.definition_zh),
-        ("exampleEn", &record.example_en),
-        ("exampleZh", &record.example_zh),
         ("license", &record.license),
         ("sourceId", &record.source_id),
         ("sourceUrl", &record.source_url),
@@ -192,7 +226,20 @@ fn validate_record(record: &LanguageRecord) -> AppResult<()> {
             )));
         }
     }
-    if !ALLOWED_RECORD_LICENSES.contains(&record.license.as_str()) {
+    // The explicitly licensed Kyle Bing source contains a small number of
+    // rows without an extracted part of speech. Preserve that absence rather
+    // than inventing metadata; all other packs remain fail-closed.
+    if record.part_of_speech.trim().is_empty()
+        && record.license != "LicenseRef-KyleBing-English-Vocabulary-Explicit-Grant"
+    {
+        return Err(AppError::InvalidData(format!(
+            "record {} has empty partOfSpeech",
+            record.id
+        )));
+    }
+    if !ALLOWED_RECORD_LICENSES.contains(&record.license.as_str())
+        && record.license != "LicenseRef-KyleBing-English-Vocabulary-Explicit-Grant"
+    {
         return Err(AppError::InvalidData(format!(
             "record {} uses non-allowlisted license {}",
             record.id, record.license
@@ -204,7 +251,7 @@ fn validate_record(record: &LanguageRecord) -> AppResult<()> {
             record.id
         )));
     }
-    if record.frequency_rank < 0 {
+    if record.frequency_rank.unwrap_or_default() < 0 {
         return Err(AppError::InvalidData(format!(
             "record {} has an invalid frequency rank",
             record.id
@@ -241,7 +288,7 @@ fn upsert_record(
            record_license = excluded.record_license, source_id = excluded.source_id, source_url = excluded.source_url,
            provenance_json = excluded.provenance_json, learning_ready = excluded.learning_ready",
         params![record.id, pack_id, record.word, record.phonetic, record.part_of_speech, record.definition_zh,
-            record.example_en, record.example_zh, record.tier.as_str(), record.frequency_rank, record.license,
+            record.example_en.as_deref().unwrap_or(""), record.example_zh.as_deref().unwrap_or(""), record.tier.as_str(), record.frequency_rank.unwrap_or_default(), record.license,
             record.source_id, record.source_url, provenance, record.learning_ready as i64],
     )?;
     let now = Utc::now().to_rfc3339();

@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "VocaPip",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "identifier": "io.github.dodgeho.vocapip",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -56,7 +56,17 @@
       "resources/language-packs/zh-CN-en.json",
       "resources/licenses/application.txt",
       "resources/licenses/language-pack.txt",
-      "resources/licenses/third-party.txt"
+      "resources/licenses/third-party.txt",
+      "resources/language-packs/vocabularybook/catalog.json",
+      "resources/language-packs/vocabularybook/LICENSE",
+      "resources/language-packs/vocabularybook/SHA256SUMS",
+      "resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-middle-school.json",
+      "resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-high-school.json",
+      "resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-cet4.json",
+      "resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-cet6.json",
+      "resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-postgraduate.json",
+      "resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-toefl.json",
+      "resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-sat.json"
     ],
     "windows": {
       "nsis": {

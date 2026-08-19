@@ -7,7 +7,9 @@ use crate::backup;
 use crate::db::DbState;
 use crate::error::{AppError, CommandResultExt};
 use crate::models::*;
+use crate::pet_assets;
 use crate::repository;
+use crate::speech;
 use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_dialog::DialogExt;
@@ -206,4 +208,54 @@ pub fn get_license_documents() -> Vec<LicenseDocument> {
             body: include_str!("../resources/licenses/third-party.txt").into(),
         },
     ]
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn speak_text(text: String, language: String, rate: f64) -> Result<(), String> {
+    speech::speak_text(text, language, rate).command()
+}
+
+#[tauri::command]
+pub fn stop_speaking() -> Result<(), String> {
+    speech::stop_speaking().command()
+}
+
+#[tauri::command]
+pub fn list_pet_appearances(
+    state: State<'_, DbState>,
+) -> Result<Vec<PetAppearanceSummary>, String> {
+    pet_assets::list_pet_appearances(&state).command()
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn import_pet_image(
+    state: State<'_, DbState>,
+    asset_state: PetAssetState,
+    data_url: String,
+) -> Result<PetAsset, String> {
+    pet_assets::import_pet_image(&state, asset_state, &data_url).command()
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn remove_pet_image(
+    state: State<'_, DbState>,
+    asset_state: PetAssetState,
+) -> Result<(), String> {
+    pet_assets::remove_pet_image(&state, asset_state).command()
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn get_pet_asset(
+    state: State<'_, DbState>,
+    asset_state: PetAssetState,
+) -> Result<Option<PetAsset>, String> {
+    pet_assets::get_pet_asset(&state, asset_state).command()
+}
+
+#[tauri::command(rename_all = "camelCase")]
+pub fn set_pet_appearance(
+    state: State<'_, DbState>,
+    appearance_id: String,
+) -> Result<String, String> {
+    pet_assets::set_pet_appearance(&state, &appearance_id).command()
 }

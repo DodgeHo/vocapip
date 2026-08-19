@@ -121,6 +121,71 @@
       "url": "urn:languagepet:pilot-tiering:v1",
       "version": "1",
       "artifacts": []
+    },
+    {
+      "id": "kylebing-english-vocabulary-66f4a6d",
+      "name": "KyleBing/english-vocabulary vocabularybook lists",
+      "repository": "KyleBing/english-vocabulary",
+      "commit": "66f4a6db7b61eab3534d7b84f10eed312bca4ed6",
+      "url": "https://github.com/KyleBing/english-vocabulary",
+      "license": "LicenseRef-KyleBing-English-Vocabulary-Explicit-Grant",
+      "licenseFile": "vocabularybook/LICENSE",
+      "licenseSha256": "86684be7e0d4efbc53c422e05cceab0031f8ebe5b0c6a32a4b042bc75971e1f1",
+      "upstreamChain": [
+        "kajweb/dict",
+        "KyleBing/dict",
+        "KyleBing/english-vocabulary"
+      ],
+      "publishedFields": [
+        "word",
+        "definitionZh",
+        "partOfSpeech",
+        "categoryId",
+        "tier"
+      ],
+      "policy": "Retain attribution and the supplied grant notice; upstream rights remain with their owners.",
+      "artifacts": [
+        {
+          "path": "vocabularybook/1 初中-乱序.txt",
+          "sha256": "97a0c7aa25dc2cc93fac34a533715c30b7fe4b558d8c2c69c2b366e6cd7bbd16",
+          "role": "authorized source vocabulary list"
+        },
+        {
+          "path": "vocabularybook/2 高中-乱序.txt",
+          "sha256": "7b2905414a9dba3eb829feddc749e94b16ba67cc38426dead21117d6cc30d4ed",
+          "role": "authorized source vocabulary list"
+        },
+        {
+          "path": "vocabularybook/3 四级-乱序.txt",
+          "sha256": "b6ef93b392837bfad92467ed6a8b3f22da6caf07fcfe8858c4f9eccb72069835",
+          "role": "authorized source vocabulary list"
+        },
+        {
+          "path": "vocabularybook/4 六级-乱序.txt",
+          "sha256": "4a938c26f5732194330c5453a7fe28d65cf3fd7009fcdfb5bea4517b8ce48ddb",
+          "role": "authorized source vocabulary list"
+        },
+        {
+          "path": "vocabularybook/5 考研-乱序.txt",
+          "sha256": "8a88f5cc466ec18f86f389460e986530444083f5801a131693a057b6b6a5ab17",
+          "role": "authorized source vocabulary list"
+        },
+        {
+          "path": "vocabularybook/6 托福-乱序.txt",
+          "sha256": "f7028faff8298e1f75421800b8370014f58fa1a76f0724aa5590b220b36bb516",
+          "role": "authorized source vocabulary list"
+        },
+        {
+          "path": "vocabularybook/7 SAT-乱序.txt",
+          "sha256": "2e373bf3edbe6544c35b62c9720cb946d9dc3140befa709672feb7cc2cc1b641",
+          "role": "authorized source vocabulary list"
+        },
+        {
+          "path": "vocabularybook/LICENSE",
+          "sha256": "86684be7e0d4efbc53c422e05cceab0031f8ebe5b0c6a32a4b042bc75971e1f1",
+          "role": "explicit grant and attribution notice"
+        }
+      ]
     }
   ],
   "packageLocks": [
@@ -752,5 +817,16 @@
       "sha256": "f3e46eaac2d25bfacaab4e3cb834bd5252bb3df6367dd9da932bf46ec5ca2c22",
       "bytes": 88171
     }
-  ]
+  ],
+  "generatedContent": {
+    "vocabularybook": {
+      "catalogPath": "src-tauri/resources/language-packs/vocabularybook/catalog.json",
+      "schemaVersion": 2,
+      "recordCount": 34142,
+      "categoryCount": 7,
+      "sourceCommit": "66f4a6db7b61eab3534d7b84f10eed312bca4ed6",
+      "licensePath": "src-tauri/resources/language-packs/vocabularybook/LICENSE",
+      "bundleManifestPath": "src-tauri/resources/language-packs/vocabularybook/bundle-resources.json"
+    }
+  }
 }

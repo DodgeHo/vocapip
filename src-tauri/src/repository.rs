@@ -443,10 +443,12 @@ pub fn update_settings(state: &DbState, settings: &AppSettings) -> AppResult<App
     connection.execute(
         "UPDATE settings SET reminder_interval_minutes = ?1, daily_quota = ?2, quiet_hours_enabled = ?3,
           quiet_start = ?4, quiet_end = ?5, autostart = ?6, always_on_top = ?7, language_pack_id = ?8,
-          reminders_paused = ?9, quiet_mode_until = ?10, updated_at = ?11 WHERE id = 1",
+          reminders_paused = ?9, quiet_mode_until = ?10, speech_enabled = ?11, pet_appearance_id = ?12,
+          updated_at = ?13 WHERE id = 1",
         params![settings.reminder_interval_minutes, settings.daily_quota, settings.quiet_hours_enabled as i64,
             settings.quiet_start, settings.quiet_end, settings.autostart as i64, settings.always_on_top as i64,
             settings.language_pack_id, settings.reminders_paused as i64, settings.quiet_mode_until,
+            settings.speech_enabled as i64, settings.pet_appearance_id,
             Utc::now().to_rfc3339()],
     )?;
     connection.execute(
@@ -567,7 +569,8 @@ pub fn complete_placement(
 pub fn read_settings(connection: &Connection) -> AppResult<AppSettings> {
     Ok(connection.query_row(
         "SELECT reminder_interval_minutes, daily_quota, quiet_hours_enabled, quiet_start, quiet_end,
-                autostart, always_on_top, language_pack_id, reminders_paused, quiet_mode_until
+                autostart, always_on_top, language_pack_id, reminders_paused, quiet_mode_until,
+                speech_enabled, pet_appearance_id
          FROM settings WHERE id = 1",
         [],
         |row| {
@@ -582,6 +585,8 @@ pub fn read_settings(connection: &Connection) -> AppResult<AppSettings> {
                 language_pack_id: row.get(7)?,
                 reminders_paused: row.get::<_, i64>(8)? != 0,
                 quiet_mode_until: row.get(9)?,
+                speech_enabled: row.get::<_, i64>(10)? != 0,
+                pet_appearance_id: row.get(11)?,
             })
         },
     )?)

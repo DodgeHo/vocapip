@@ -12,6 +12,11 @@ import type {
   LibraryQuery,
   LicenseDocument,
   LevelBand,
+  CustomPetAssets,
+  PetAppearanceId,
+  PetAppearanceSummary,
+  PetAssetRecord,
+  PetAssetState,
   PetSurfaceLayout,
   PetSurfaceMode,
   PlacementSubmission,
@@ -58,19 +63,49 @@ export interface CommandContract {
     result: string | null;
   };
   get_license_documents: { args: undefined; result: LicenseDocument[] };
+  speak_text: {
+    args: { text: string; language: "en-US"; rate: number };
+    result: void;
+  };
+  stop_speaking: { args: undefined; result: void };
+  list_pet_appearances: { args: undefined; result: PetAppearanceSummary[] };
+  import_pet_image: {
+    args: { state: PetAssetState; dataUrl: string };
+    result: PetAssetRecord;
+  };
+  remove_pet_image: { args: { state: PetAssetState }; result: void };
+  get_pet_asset: {
+    args: { state: PetAssetState };
+    result: PetAssetRecord | null;
+  };
+  set_pet_appearance: {
+    args: { appearanceId: PetAppearanceId };
+    result: PetAppearanceId;
+  };
 }
 
 const levelSchema = z.enum(["T1", "T2", "T3", "T4", "T5"]);
+const nullableTextAsEmptySchema = z.preprocess(
+  (value) => (value == null ? "" : value),
+  z.string(),
+);
+const nullableNumberAsZeroSchema = z.preprocess(
+  (value) => (value == null ? 0 : value),
+  z.number(),
+);
 const cardSchema = z.object({
   id: z.string(),
   word: z.string(),
-  phonetic: z.string().optional(),
+  phonetic: z.preprocess(
+    (value) => (value == null ? undefined : value),
+    z.string().optional(),
+  ),
   partOfSpeech: z.string(),
   definitionZh: z.string(),
-  exampleEn: z.string(),
-  exampleZh: z.string(),
+  exampleEn: nullableTextAsEmptySchema,
+  exampleZh: nullableTextAsEmptySchema,
   tier: levelSchema,
-  frequencyRank: z.number(),
+  frequencyRank: nullableNumberAsZeroSchema,
   status: z.enum(["new", "learning", "review", "relearning"]),
   favorite: z.boolean(),
   lastStudiedAt: z.string().optional(),
@@ -90,6 +125,31 @@ const cardSchema = z.object({
     })
     .optional(),
 });
+const appearanceSchema = z.enum(["mint", "coral", "sun", "night", "custom"]);
+const petAssetStateSchema = z.enum([
+  "default",
+  "idle",
+  "click",
+  "error",
+  "correct",
+  "upgrade",
+]);
+const petAssetSchema = z.object({
+  state: petAssetStateSchema,
+  dataUrl: z.string(),
+  id: z.string().optional(),
+  appearanceId: appearanceSchema.optional(),
+  mimeType: z.string().optional(),
+  width: z.number().optional(),
+  height: z.number().optional(),
+  updatedAt: z.string().optional(),
+});
+const petAppearanceSummarySchema = z.object({
+  id: appearanceSchema,
+  bundled: z.boolean(),
+  selected: z.boolean().optional(),
+  availableStates: z.array(petAssetStateSchema).optional(),
+});
 const settingsSchema = z.object({
   reminderIntervalMinutes: z.number(),
   dailyQuota: z.number(),
@@ -100,6 +160,8 @@ const settingsSchema = z.object({
   alwaysOnTop: z.boolean(),
   languagePackId: z.string(),
   remindersPaused: z.boolean(),
+  speechEnabled: z.boolean().default(false),
+  petAppearanceId: appearanceSchema.default("mint"),
   quietModeUntil: z.string().optional(),
 });
 const bootstrapSchema = z.object({
@@ -132,6 +194,33 @@ const bootstrapSchema = z.object({
   placementTier: levelSchema.optional(),
   currentCard: cardSchema.optional(),
 });
+const libraryPayloadSchema = z.object({
+  items: z.array(cardSchema),
+  counts: z.record(z.string(), z.number()),
+});
+const reviewOutcomeSchema = z.object({
+  card: cardSchema,
+  progress: z.object({
+    xp: z.number(),
+    level: z.number(),
+    xpIntoLevel: z.number(),
+    xpForNextLevel: z.number(),
+    streakDays: z.number(),
+  }),
+  daily: z.object({
+    completed: z.number(),
+    goal: z.number(),
+    reviewsDue: z.number(),
+  }),
+  xpAwarded: z.number(),
+  leveledUp: z.boolean(),
+  feedback: z.string(),
+  nextCard: cardSchema.optional(),
+});
+
+export function parseLearningCard(value: unknown): LearningCard {
+  return cardSchema.parse(value);
+}
 
 const demoCards: LearningCard[] = [
   [
@@ -292,6 +381,23 @@ interface DemoState {
 }
 const storageKey = "vocapip-demo-v2";
 const legacyStorageKey = "languagepet-demo-v2";
+const customPetImageStorageKey = "vocapip-custom-pet-image-v2";
+const petAssetStates: PetAssetState[] = [
+  "default",
+  "idle",
+  "click",
+  "error",
+  "correct",
+  "upgrade",
+];
+const bundledPetAppearances: PetAppearanceSummary[] = [
+  { id: "mint", bundled: true },
+  { id: "coral", bundled: true },
+  { id: "sun", bundled: true },
+  { id: "night", bundled: true },
+  { id: "custom", bundled: false },
+];
+const defaultPetAppearance: PetAppearanceId = "mint";
 function freshDemo(): DemoState {
   const settings: AppSettings = {
     reminderIntervalMinutes: 30,
@@ -303,6 +409,8 @@ function freshDemo(): DemoState {
     alwaysOnTop: false,
     languagePackId: "zh-en-core",
     remindersPaused: false,
+    speechEnabled: false,
+    petAppearanceId: defaultPetAppearance,
   };
   return {
     cards: structuredClone(demoCards),
@@ -340,8 +448,14 @@ function loadDemo(): DemoState {
       localStorage.getItem(storageKey) ??
       localStorage.getItem(legacyStorageKey);
     if (!value) return freshDemo();
-    const state = JSON.parse(value) as DemoState;
-    localStorage.setItem(storageKey, value);
+    const parsed = JSON.parse(value) as DemoState;
+    const state: DemoState = {
+      ...parsed,
+      bootstrap: bootstrapSchema.parse(parsed.bootstrap),
+      cards: z.array(cardSchema).parse(parsed.cards),
+      reviewKeys: z.array(z.string()).catch([]).parse(parsed.reviewKeys),
+    };
+    storeDemo(state);
     return state;
   } catch {
     return freshDemo();
@@ -400,7 +514,9 @@ export const api = {
     fsrsCard: FsrsCardSnapshot,
   ): Promise<ReviewOutcome> {
     if (isTauri())
-      return call("submit_review", { cardId, rating, reviewedAt, fsrsCard });
+      return reviewOutcomeSchema.parse(
+        await call("submit_review", { cardId, rating, reviewedAt, fsrsCard }),
+      );
     const state = loadDemo();
     const index = state.cards.findIndex((card) => card.id === cardId);
     if (index < 0) throw new Error("Card not found");
@@ -450,7 +566,8 @@ export const api = {
     };
   },
   async listLibrary(query: LibraryQuery): Promise<LibraryPayload> {
-    if (isTauri()) return call("list_library", { query });
+    if (isTauri())
+      return libraryPayloadSchema.parse(await call("list_library", { query }));
     const cards = loadDemo().cards;
     const lower = query.search.trim().toLocaleLowerCase();
     const recentCutoff = Date.now() - 7 * 86400000;
@@ -574,6 +691,73 @@ export const api = {
     else await disable();
     return isEnabled();
   },
+  async speakText(text: string): Promise<void> {
+    const normalized = text.trim();
+    if (!normalized) return;
+    if (isTauri())
+      return call("speak_text", {
+        text: normalized,
+        language: "en-US",
+        rate: 1,
+      });
+  },
+  async stopSpeaking(): Promise<void> {
+    if (isTauri()) return call("stop_speaking", undefined);
+  },
+  async listPetAppearances(): Promise<PetAppearanceSummary[]> {
+    if (isTauri())
+      return z
+        .array(petAppearanceSummarySchema)
+        .parse(await call("list_pet_appearances", undefined));
+    return structuredClone(bundledPetAppearances);
+  },
+  async importPetImage(
+    state: PetAssetState,
+    dataUrl: string,
+  ): Promise<PetAssetRecord> {
+    if (isTauri())
+      return petAssetSchema.parse(
+        await call("import_pet_image", { state, dataUrl }),
+      );
+    localStorage.setItem(`${customPetImageStorageKey}:${state}`, dataUrl);
+    return { state, dataUrl };
+  },
+  async removePetImage(state: PetAssetState): Promise<void> {
+    if (isTauri()) return call("remove_pet_image", { state });
+    localStorage.removeItem(`${customPetImageStorageKey}:${state}`);
+  },
+  async getPetAsset(state: PetAssetState): Promise<PetAssetRecord | null> {
+    if (isTauri()) {
+      const result = await call("get_pet_asset", { state });
+      return result ? petAssetSchema.parse(result) : null;
+    }
+    const dataUrl = localStorage.getItem(
+      `${customPetImageStorageKey}:${state}`,
+    );
+    return dataUrl ? { state, dataUrl } : null;
+  },
+  async getPetAssets(): Promise<CustomPetAssets> {
+    const assets = await Promise.all(
+      petAssetStates.map((state) => api.getPetAsset(state)),
+    );
+    return Object.fromEntries(
+      assets
+        .filter((asset): asset is PetAssetRecord => asset !== null)
+        .map((asset) => [asset.state, asset.dataUrl]),
+    ) as CustomPetAssets;
+  },
+  async setPetAppearance(
+    appearanceId: PetAppearanceId,
+  ): Promise<PetAppearanceId> {
+    if (isTauri())
+      return appearanceSchema.parse(
+        await call("set_pet_appearance", { appearanceId }),
+      );
+    const state = loadDemo();
+    state.bootstrap.settings.petAppearanceId = appearanceId;
+    storeDemo(state);
+    return appearanceId;
+  },
   async exportData(): Promise<string | null> {
     if (isTauri()) {
       const result = await call("export_data", undefined);
@@ -604,9 +788,14 @@ export const api = {
           const file = input.files?.[0];
           if (!file) return resolve(null);
           const parsed = JSON.parse(await file.text()) as DemoState;
-          const checked = bootstrapSchema.parse(parsed.bootstrap);
-          storeDemo(parsed);
-          resolve(checked);
+          const normalized: DemoState = {
+            ...parsed,
+            bootstrap: bootstrapSchema.parse(parsed.bootstrap),
+            cards: z.array(cardSchema).parse(parsed.cards),
+            reviewKeys: z.array(z.string()).catch([]).parse(parsed.reviewKeys),
+          };
+          storeDemo(normalized);
+          resolve(normalized.bootstrap);
         } catch (error) {
           reject(error);
         }

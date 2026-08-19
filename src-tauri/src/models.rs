@@ -160,6 +160,8 @@ pub struct AppSettings {
     pub always_on_top: bool,
     pub language_pack_id: String,
     pub reminders_paused: bool,
+    pub speech_enabled: bool,
+    pub pet_appearance_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub quiet_mode_until: Option<String>,
 }
@@ -234,6 +236,68 @@ pub struct ExportResult {
     pub path: String,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum PetAssetState {
+    Default,
+    Idle,
+    Click,
+    Error,
+    Correct,
+    Upgrade,
+}
+
+impl PetAssetState {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Default => "default",
+            Self::Idle => "idle",
+            Self::Click => "click",
+            Self::Error => "error",
+            Self::Correct => "correct",
+            Self::Upgrade => "upgrade",
+        }
+    }
+}
+
+impl TryFrom<&str> for PetAssetState {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, String> {
+        match value {
+            "default" => Ok(Self::Default),
+            "idle" => Ok(Self::Idle),
+            "click" => Ok(Self::Click),
+            "error" => Ok(Self::Error),
+            "correct" => Ok(Self::Correct),
+            "upgrade" => Ok(Self::Upgrade),
+            _ => Err(format!("invalid pet asset state: {value}")),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PetAsset {
+    pub id: String,
+    pub appearance_id: String,
+    pub state: PetAssetState,
+    pub mime_type: String,
+    pub width: u32,
+    pub height: u32,
+    pub data_url: String,
+    pub updated_at: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct PetAppearanceSummary {
+    pub id: String,
+    pub bundled: bool,
+    pub selected: bool,
+    pub available_states: Vec<PetAssetState>,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LanguagePack {
@@ -256,12 +320,16 @@ pub struct LanguageRecord {
     pub word: String,
     #[serde(default)]
     pub phonetic: Option<String>,
+    #[serde(deserialize_with = "deserialize_part_of_speech")]
     pub part_of_speech: String,
     pub definition_zh: String,
-    pub example_en: String,
-    pub example_zh: String,
+    #[serde(default)]
+    pub example_en: Option<String>,
+    #[serde(default)]
+    pub example_zh: Option<String>,
     pub tier: LevelBand,
-    pub frequency_rank: i64,
+    #[serde(default)]
+    pub frequency_rank: Option<i64>,
     pub license: String,
     pub source_id: String,
     pub source_url: String,
@@ -272,6 +340,25 @@ pub struct LanguageRecord {
 
 fn default_learning_ready() -> bool {
     true
+}
+
+fn deserialize_part_of_speech<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    let value = serde_json::Value::deserialize(deserializer)?;
+    match value {
+        serde_json::Value::String(text) => Ok(text),
+        serde_json::Value::Array(values) => Ok(values
+            .into_iter()
+            .filter_map(|value| value.as_str().map(str::to_owned))
+            .collect::<Vec<_>>()
+            .join(" ")),
+        serde_json::Value::Null => Ok(String::new()),
+        _ => Err(serde::de::Error::custom(
+            "partOfSpeech must be a string or array",
+        )),
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

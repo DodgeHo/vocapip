@@ -33,3 +33,7 @@ The third-party Tauri skill guidance was installed from full-stack-skills/tauri-
 ## Windows packaging
 
 The release executable, NSIS installer, and MSI are unsigned because no code-signing certificate is configured. Windows SmartScreen may display a reputation warning for these local build artifacts.
+
+## KyleBing vocabularybook
+
+The seven `vocabularybook/` source lists are from [KyleBing/english-vocabulary](https://github.com/KyleBing/english-vocabulary) at commit `66f4a6db7b61eab3534d7b84f10eed312bca4ed6`. VocaPip redistributes them under the explicit grant notice at `vocabularybook/LICENSE`; that notice and attribution are included in the generated bundle resources. The documented upstream chain is `kajweb/dict` -> `KyleBing/dict` -> `KyleBing/english-vocabulary`; this grant does not waive upstream rights. No `wallhaven-0p1z90.png` or other image from `vocabularybook/` is bundled.

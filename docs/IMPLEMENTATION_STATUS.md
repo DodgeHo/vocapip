@@ -88,3 +88,32 @@ Last updated: 2026-08-19 (Asia/Taipei)
 - Windows artifacts are unsigned and may trigger SmartScreen warnings.
 - WebView2 is configured with the offline installer mode; the target machine still needs a compatible Windows/WebView2 runtime path during installation.
 - A local Vite loopback server is used only for development; the bundled production app has no runtime network capability.
+
+## Content subtask update (2026-08-19)
+
+- vocabularybook schema v2 content pipeline: PASS for this subtask. Seven source SHA-256 values and the supplied vocabularybook/LICENSE SHA-256 are verified fail closed.
+- Generated resources: PASS. 34,142 category-deduplicated records from 54,356 source lines across 7 categories. Duplicate counts and source line provenance are retained.
+- Missing factual fields: PASS. Phonetic, English example, Chinese example, and frequency rank are JSON null; validators reject non-null substitutions.
+- Image exclusion: PASS. wallhaven-0p1z90.png is not copied into generated resources and is ignored by vocabularybook/.gitignore.
+- Main-thread integration pending: extend src-tauri/src/models.rs and db.rs to accept schema v2 nullable fields, category IDs, and resource catalog loading; update src-tauri/tauri.conf.json resources from bundle-resources.json; add UI category selection and empty-example rendering.
+
+| 2026-08-19 | vocabularybook content pipeline build | PASS; 34,142 records, 7 categories, 54,356 source lines. |
+| 2026-08-19 | vocabularybook content validation | PASS; source/license hashes, provenance, deduplication, null-field policy, and image exclusion. |
+| 2026-08-19 | vocabularybook content unittest | PASS; 6/6 tests. |
+| 2026-08-19 | vocabularybook deterministic rebuild-check | PASS. |
+
+## 2026-08-19 release verification
+
+- Version is now `0.2.0`; release artifacts were built locally on Windows x64.
+- `cargo fmt --manifest-path src-tauri/Cargo.toml --all -- --check`: PASS.
+- `cargo test --manifest-path src-tauri/Cargo.toml --locked`: PASS, 30 tests.
+- `cargo clippy --manifest-path src-tauri/Cargo.toml --locked --all-targets -- -D warnings`: PASS.
+- `npm run format:check`: PASS.
+- `npm run lint`: PASS.
+- `npm run typecheck`: PASS.
+- `npm run test`: PASS, 14 tests.
+- `npm run test:e2e`: PASS, 3 tests, including renderer-offline workflows.
+- `scripts/verify-vocabularybook.ps1`: PASS; 7/7 source files and deterministic pack validation.
+- `scripts/verify-offline.ps1`: PASS; static audit report at `artifacts/offline-audit.json`.
+- `npm run tauri:build`: PASS; executable, NSIS and MSI produced. The MSI packaging step downloaded the configured WebView2 offline installer at build time; the application runtime remains offline-only.
+- Portable ZIP staged at `artifacts/VocaPip-0.2.0-windows-x64-portable.zip`; installers are unsigned because no signing certificate is configured.

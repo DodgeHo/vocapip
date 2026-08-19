@@ -1,0 +1,103 @@
+# Vocabulary Data License / 英语词库数据授权许可
+
+This is an explicit authorization from the author of
+[KyleBing/english-vocabulary](https://github.com/KyleBing/english-vocabulary),
+granting the VocaPip project the right to use, modify, and distribute the
+vocabulary data files listed below.
+
+本文档是 [KyleBing/english-vocabulary](https://github.com/KyleBing/english-vocabulary)
+作者出具的明确授权，授予 VocaPip 项目使用、修改与分发下列词库数据文件的权利。
+
+## 1. Grantor / 授权方
+
+Kyle Bing（GitHub: [KyleBing](https://github.com/KyleBing)），
+`KyleBing/english-vocabulary` 仓库的作者与维护者。
+
+## 2. Grantee / 被授权方
+
+The VocaPip project（GitHub: [DodgeHo/vocapip](https://github.com/DodgeHo/vocapip)），
+包括其维护者、贡献者，以及通过 VocaPip 获得这些文件的全部下游用户。
+
+## 3. Covered Files / 授权文件
+
+The seven vocabulary files in the `vocabularybook/` directory of the VocaPip
+repository, byte-for-byte identical to the files of the same names in
+`KyleBing/english-vocabulary` at commit
+`66f4a6db7b61eab3534d7b84f10eed312bca4ed6` (master):
+
+下列七个词库文件，位于 VocaPip 仓库的 `vocabularybook/` 目录，与
+`KyleBing/english-vocabulary` 仓库 master 分支提交
+`66f4a6db7b61eab3534d7b84f10eed312bca4ed6` 处的同名文件逐字（逐字节）一致：
+
+| # | File / 文件 | SHA-256 |
+|---|-------------|---------|
+| 1 | `1 初中-乱序.txt` | `97a0c7aa25dc2cc93fac34a533715c30b7fe4b558d8c2c69c2b366e6cd7bbd16` |
+| 2 | `2 高中-乱序.txt` | `7b2905414a9dba3eb829feddc749e94b16ba67cc38426dead21117d6cc30d4ed` |
+| 3 | `3 四级-乱序.txt` | `b6ef93b392837bfad92467ed6a8b3f22da6caf07fcfe8858c4f9eccb72069835` |
+| 4 | `4 六级-乱序.txt` | `4a938c26f5732194330c5453a7fe28d65cf3fd7009fcdfb5bea4517b8ce48ddb` |
+| 5 | `5 考研-乱序.txt` | `8a88f5cc466ec18f86f389460e986530444083f5801a131693a057b6b6a5ab17` |
+| 6 | `6 托福-乱序.txt` | `f7028faff8298e1f75421800b8370014f58fa1a76f0724aa5590b220b36bb516` |
+| 7 | `7 SAT-乱序.txt` | `2e373bf3edbe6544c35b62c9720cb946d9dc3140befa709672feb7cc2cc1b641` |
+
+## 4. Grant / 授权内容
+
+Subject to the conditions in Section 5, the Grantor grants to the Grantee a
+perpetual, worldwide, royalty-free, non-exclusive, irrevocable license to:
+
+在遵守第 5 条条件的前提下，授权方授予被授权方一项永久、全球范围、免版税、
+非独占、不可撤销的许可，允许其：
+
+1. **Use / 使用** — use, reproduce, and store the files;
+   使用、复制与存储上述文件；
+2. **Modify / 修改** — modify, adapt, and create derivative works from the files;
+   修改、改编并基于上述文件创作衍生作品；
+3. **Distribute / 分发** — bundle, distribute, and sublicense the files, in
+   original or modified form, including within compiled or packaged products;
+   以原始或修改后的形式捆绑、分发与再许可上述文件，包括随编译产物或打包产品分发；
+4. **Purpose / 用途** — use the files for any purpose, including commercial
+   purposes.
+   将上述文件用于任何目的，包括商业用途。
+
+## 5. Conditions / 条件
+
+1. **Attribution / 署名** — any distribution of the files (original or
+   modified) must retain this notice and visibly credit
+   `KyleBing/english-vocabulary` (https://github.com/KyleBing/english-vocabulary)
+   as the source.
+   任何对上述文件（原始或修改后）的分发都必须保留本通知，并显著标注来源为
+   `KyleBing/english-vocabulary`（https://github.com/KyleBing/english-vocabulary）。
+2. **Scope of the grant / 授权范围** — this grant is made to the extent of the
+   Grantor's own rights in the files. As documented in the
+   `english-vocabulary` README, the files derive from the upstream chain
+   [kajweb/dict](https://github.com/kajweb/dict) →
+   [KyleBing/dict](https://github.com/KyleBing/dict) →
+   `KyleBing/english-vocabulary`. Any rights held by upstream sources remain
+   with their respective owners and are neither transferred nor waived by this
+   license. The Grantee remains responsible for complying with any applicable
+   upstream terms.
+   本授权仅在授权方对上述文件享有的权利范围内作出。如 `english-vocabulary`
+   的 README 所述，这些文件源自上游衍生链
+   [kajweb/dict](https://github.com/kajweb/dict) →
+   [KyleBing/dict](https://github.com/KyleBing/dict) →
+   `KyleBing/english-vocabulary`。上游来源所持有的任何权利仍归其各自权利人所有，
+   本许可既不转移也不放弃这些权利；被授权方仍应自行遵守适用的上游条款。
+
+## 6. Disclaimer / 免责声明
+
+THE FILES ARE PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE, AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+GRANTOR BE LIABLE FOR ANY CLAIM, DAMAGES, OR OTHER LIABILITY ARISING FROM OR
+IN CONNECTION WITH THE USE OF THE FILES.
+
+上述文件按"现状"提供，不附带任何明示或默示的担保，包括但不限于适销性、
+特定用途适用性与不侵权担保。在任何情况下，授权方均不对因使用上述文件而
+产生的任何索赔、损害或其他责任负责。
+
+---
+
+**Grantor / 授权方：** Kyle Bing（GitHub: KyleBing）
+
+**Signature / 签名：** ____________________
+
+**Date / 日期：** 2026-08-19

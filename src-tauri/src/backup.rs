@@ -2,6 +2,7 @@ use crate::db::{DbState, DATABASE_VERSION};
 use crate::error::{AppError, AppResult};
 use crate::models::{BackupDocument, BootstrapPayload, ExportResult};
 use crate::repository::bootstrap_with_connection;
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use chrono::Utc;
 use rusqlite::types::{Value as SqlValue, ValueRef};
 use rusqlite::{params_from_iter, Connection};
@@ -14,8 +15,10 @@ use uuid::Uuid;
 
 const PRODUCT_NAME: &str = "VocaPip";
 const LEGACY_PRODUCT_NAME: &str = "LanguagePet";
+const BACKUP_SCHEMA_VERSION: u32 = 2;
 const MAX_BACKUP_BYTES: u64 = 64 * 1024 * 1024;
-const BACKUP_TABLES: &[&str] = &[
+const MAX_PET_ASSET_BYTES: usize = 5 * 1024 * 1024;
+const LEGACY_BACKUP_TABLES: &[&str] = &[
     "study_cards",
     "review_logs",
     "learner_profile",
@@ -28,7 +31,22 @@ const BACKUP_TABLES: &[&str] = &[
     "learning_records",
     "app_runtime",
 ];
+const BACKUP_TABLES: &[&str] = &[
+    "study_cards",
+    "review_logs",
+    "learner_profile",
+    "placement_attempts",
+    "user_progress",
+    "settings",
+    "favorites",
+    "relearn_queue",
+    "daily_stats",
+    "learning_records",
+    "app_runtime",
+    "pet_assets",
+];
 const DELETE_ORDER: &[&str] = &[
+    "pet_assets",
     "review_logs",
     "favorites",
     "relearn_queue",
@@ -50,7 +68,7 @@ pub fn export_data(state: &DbState, path: &Path) -> AppResult<ExportResult> {
         tables.insert((*table).to_string(), export_table(&connection, table)?);
     }
     let document = BackupDocument {
-        schema_version: 1,
+        schema_version: BACKUP_SCHEMA_VERSION,
         product: PRODUCT_NAME.into(),
         exported_at: Utc::now().to_rfc3339(),
         database_user_version: DATABASE_VERSION,
@@ -108,11 +126,9 @@ pub fn import_data(state: &DbState, path: &Path) -> AppResult<BootstrapPayload> 
         transaction.execute(&format!("DELETE FROM {table}"), [])?;
     }
     for table in BACKUP_TABLES {
-        let rows = document
-            .tables
-            .get(*table)
-            .ok_or_else(|| AppError::InvalidData(format!("backup omits table {table}")))?;
-        import_table(&transaction, table, rows)?;
+        if let Some(rows) = document.tables.get(*table) {
+            import_table(&transaction, table, rows)?;
+        }
     }
     ensure_singletons(&transaction)?;
     transaction.commit()?;
@@ -170,7 +186,7 @@ fn validate_backup_path(path: &Path) -> AppResult<()> {
 }
 
 fn validate_document(document: &BackupDocument) -> AppResult<()> {
-    if document.schema_version != 1
+    if ![1, BACKUP_SCHEMA_VERSION].contains(&document.schema_version)
         || ![PRODUCT_NAME, LEGACY_PRODUCT_NAME].contains(&document.product.as_str())
     {
         return Err(AppError::InvalidData(
@@ -183,11 +199,16 @@ fn validate_document(document: &BackupDocument) -> AppResult<()> {
             document.database_user_version
         )));
     }
-    if document.tables.len() != BACKUP_TABLES.len()
+    let expected_tables = if document.schema_version == 1 {
+        LEGACY_BACKUP_TABLES
+    } else {
+        BACKUP_TABLES
+    };
+    if document.tables.len() != expected_tables.len()
         || document
             .tables
             .keys()
-            .any(|table| !BACKUP_TABLES.contains(&table.as_str()))
+            .any(|table| !expected_tables.contains(&table.as_str()))
     {
         return Err(AppError::InvalidData(
             "backup contains an unknown or missing table".into(),
@@ -221,7 +242,9 @@ fn sql_to_json(value: ValueRef<'_>) -> Value {
             .map(Value::Number)
             .unwrap_or(Value::Null),
         ValueRef::Text(value) => Value::String(String::from_utf8_lossy(value).into_owned()),
-        ValueRef::Blob(_) => Value::Null,
+        ValueRef::Blob(value) => serde_json::json!({
+            "$base64": BASE64.encode(value),
+        }),
     }
 }
 
@@ -251,7 +274,7 @@ fn import_table(
         );
         let values = columns
             .iter()
-            .map(|column| json_to_sql(&object[column]))
+            .map(|column| json_to_sql(table, column, &object[column]))
             .collect::<AppResult<Vec<_>>>()?;
         transaction.execute(&sql, params_from_iter(values))?;
     }
@@ -266,7 +289,7 @@ fn table_columns(connection: &Connection, table: &str) -> AppResult<HashSet<Stri
     Ok(columns)
 }
 
-fn json_to_sql(value: &Value) -> AppResult<SqlValue> {
+fn json_to_sql(table: &str, column: &str, value: &Value) -> AppResult<SqlValue> {
     match value {
         Value::Null => Ok(SqlValue::Null),
         Value::Bool(value) => Ok(SqlValue::Integer(i64::from(*value))),
@@ -280,7 +303,31 @@ fn json_to_sql(value: &Value) -> AppResult<SqlValue> {
             }
         }
         Value::String(value) => Ok(SqlValue::Text(value.clone())),
-        Value::Array(_) | Value::Object(_) => Err(AppError::InvalidData(
+        Value::Object(object) => {
+            if table != "pet_assets" || column != "bytes" {
+                return Err(AppError::InvalidData(format!(
+                    "{table}.{column} contains unsupported nested JSON"
+                )));
+            }
+            if object.len() != 1 || !object.contains_key("$base64") {
+                return Err(AppError::InvalidData(format!(
+                    "{table}.{column} contains an invalid binary value"
+                )));
+            }
+            let encoded = object["$base64"].as_str().ok_or_else(|| {
+                AppError::InvalidData(format!("{table}.{column} binary value is not text"))
+            })?;
+            let bytes = BASE64.decode(encoded).map_err(|_| {
+                AppError::InvalidData(format!("{table}.{column} contains invalid base64"))
+            })?;
+            if bytes.is_empty() || bytes.len() > MAX_PET_ASSET_BYTES {
+                return Err(AppError::InvalidData(format!(
+                    "{table}.{column} binary value exceeds the supported size"
+                )));
+            }
+            Ok(SqlValue::Blob(bytes))
+        }
+        Value::Array(_) => Err(AppError::InvalidData(
             "nested JSON is not valid in a database cell".into(),
         )),
     }
@@ -306,12 +353,19 @@ fn ensure_singletons(connection: &Connection) -> AppResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::DbState;
+    use crate::db::{run_migrations, DbState};
+
+    fn test_state(path: std::path::PathBuf) -> DbState {
+        let state = DbState::for_test(path);
+        let mut connection = state.connect().unwrap();
+        run_migrations(&mut connection).unwrap();
+        state
+    }
 
     #[test]
     fn export_then_import_restores_progress() {
         let directory = tempfile::tempdir().unwrap();
-        let state = DbState::initialize(directory.path().join("user.sqlite")).unwrap();
+        let state = test_state(directory.path().join("user.sqlite"));
         state
             .connect()
             .unwrap()
@@ -329,9 +383,74 @@ mod tests {
     }
 
     #[test]
+    fn export_then_import_restores_speech_pet_settings_and_asset_blob() {
+        let directory = tempfile::tempdir().unwrap();
+        let state = test_state(directory.path().join("user.sqlite"));
+        let asset_bytes = vec![0_u8, 1, 2, 3, 250, 255];
+        state
+            .connect()
+            .unwrap()
+            .execute(
+                "UPDATE settings SET speech_enabled = 1, pet_appearance_id = 'custom' WHERE id = 1",
+                [],
+            )
+            .unwrap();
+        state
+            .connect()
+            .unwrap()
+            .execute(
+                "INSERT INTO pet_assets (id, appearance_id, state, mime_type, width, height, bytes, created_at, updated_at)
+                 VALUES ('asset-1', 'custom', 'default', 'image/png', 2, 3, ?1, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z')",
+                [&asset_bytes],
+            )
+            .unwrap();
+
+        let backup = directory.path().join("backup.json");
+        export_data(&state, &backup).unwrap();
+        let document: BackupDocument =
+            serde_json::from_slice(&std::fs::read(&backup).unwrap()).unwrap();
+        assert_eq!(document.schema_version, BACKUP_SCHEMA_VERSION);
+        let encoded = &document.tables["pet_assets"][0]["bytes"]["$base64"];
+        assert_eq!(encoded, &Value::String(BASE64.encode(&asset_bytes)));
+
+        state
+            .connect()
+            .unwrap()
+            .execute(
+                "UPDATE settings SET speech_enabled = 0, pet_appearance_id = 'mint' WHERE id = 1",
+                [],
+            )
+            .unwrap();
+        state
+            .connect()
+            .unwrap()
+            .execute("DELETE FROM pet_assets", [])
+            .unwrap();
+
+        import_data(&state, &backup).unwrap();
+        let connection = state.connect().unwrap();
+        let settings: (i64, String) = connection
+            .query_row(
+                "SELECT speech_enabled, pet_appearance_id FROM settings WHERE id = 1",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(settings, (1, "custom".to_owned()));
+        let restored_bytes: Vec<u8> = connection
+            .query_row(
+                "SELECT bytes FROM pet_assets WHERE id = 'asset-1'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(restored_bytes, asset_bytes);
+    }
+
+    #[test]
     fn export_rejects_non_json_destination() {
         let directory = tempfile::tempdir().unwrap();
-        let state = DbState::initialize(directory.path().join("user.sqlite")).unwrap();
+        let state = test_state(directory.path().join("user.sqlite"));
         let result = export_data(&state, &directory.path().join("backup.txt"));
         assert!(result.is_err());
     }
@@ -349,12 +468,39 @@ mod tests {
             product: LEGACY_PRODUCT_NAME.into(),
             exported_at: Utc::now().to_rfc3339(),
             database_user_version: DATABASE_VERSION,
-            tables: BACKUP_TABLES
+            tables: LEGACY_BACKUP_TABLES
                 .iter()
                 .map(|table| ((*table).to_string(), Vec::new()))
                 .collect(),
         };
         assert!(validate_document(&document).is_ok());
+    }
+
+    #[test]
+    fn legacy_backup_without_new_settings_and_assets_is_accepted() {
+        let document = BackupDocument {
+            schema_version: 1,
+            product: PRODUCT_NAME.into(),
+            exported_at: Utc::now().to_rfc3339(),
+            database_user_version: 4,
+            tables: LEGACY_BACKUP_TABLES
+                .iter()
+                .map(|table| ((*table).to_string(), Vec::new()))
+                .collect(),
+        };
+        assert!(validate_document(&document).is_ok());
+    }
+
+    #[test]
+    fn malformed_pet_asset_binary_value_is_rejected() {
+        let value = serde_json::json!({"$base64": "not valid base64%%%"});
+        assert!(json_to_sql("pet_assets", "bytes", &value).is_err());
+    }
+
+    #[test]
+    fn binary_values_are_not_accepted_in_non_blob_columns() {
+        let value = serde_json::json!({"$base64": BASE64.encode([1_u8, 2, 3])});
+        assert!(json_to_sql("settings", "speech_enabled", &value).is_err());
     }
 
     #[test]
