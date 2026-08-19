@@ -1,0 +1,6 @@
+VocaPip application code
+
+License: GNU General Public License v3.0 or later (GPL-3.0-or-later).
+Copyright: VocaPip contributors.
+
+The corresponding source code and the complete GPL-3.0 text are distributed with the project source tree. This build contains no telemetry, updater, HTTP client, WebSocket client, shell plugin, or online dictionary integration.

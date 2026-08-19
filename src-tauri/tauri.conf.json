@@ -1,0 +1,75 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "VocaPip",
+  "version": "0.1.0",
+  "identifier": "io.github.dodgeho.vocapip",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://127.0.0.1:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [
+      {
+        "label": "main",
+        "title": "VocaPip",
+        "width": 232,
+        "height": 258,
+        "minWidth": 200,
+        "minHeight": 220,
+        "resizable": false,
+        "fullscreen": false,
+        "decorations": false,
+        "transparent": true,
+        "alwaysOnTop": false,
+        "skipTaskbar": true,
+        "shadow": false,
+        "visible": true,
+        "focus": false,
+        "backgroundColor": "#00000000"
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self' customprotocol: asset:; connect-src 'none'; img-src 'self' asset: data:; media-src 'self' asset: data:; font-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; object-src 'none'; frame-src 'none'; base-uri 'none'; form-action 'none'",
+      "assetProtocol": {
+        "enable": false
+      },
+      "freezePrototype": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["nsis", "msi"],
+    "category": "Education",
+    "shortDescription": "Offline vocabulary learning desktop pet",
+    "longDescription": "VocaPip is an offline vocabulary learning desktop pet for Windows.",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "resources": [
+      "resources/language-packs/zh-CN-en.json",
+      "resources/licenses/application.txt",
+      "resources/licenses/language-pack.txt",
+      "resources/licenses/third-party.txt"
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerIcon": "icons/icon.ico"
+      },
+      "wix": {
+        "language": "zh-CN"
+      },
+      "webviewInstallMode": {
+        "type": "offlineInstaller",
+        "silent": true
+      }
+    }
+  }
+}

@@ -1,0 +1,827 @@
+[
+  {
+    "lemma": "time",
+    "displayForm": "time",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "15295388-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "person",
+    "displayForm": "person",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "00007846-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "year",
+    "displayForm": "year",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "15228587-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "day",
+    "displayForm": "day",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "15180180-n",
+    "tier": "T1",
+    "preferredPair": [
+      39394,
+      1446822
+    ],
+    "preferredSourceSense": "period of 24 hours"
+  },
+  {
+    "lemma": "thing",
+    "displayForm": "thing",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "00002452-n",
+    "tier": "T1",
+    "preferredPair": [
+      998434,
+      420698
+    ],
+    "preferredSourceSense": "that which is considered to exist as a separate entity, object, quality or concept"
+  },
+  {
+    "lemma": "man",
+    "displayForm": "man",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "10306910-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "woman",
+    "displayForm": "woman",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "10807146-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "child",
+    "displayForm": "child",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "09937051-n",
+    "tier": "T1",
+    "preferredPair": [
+      16346,
+      2007067
+    ],
+    "preferredSourceSense": "a minor"
+  },
+  {
+    "lemma": "family",
+    "displayForm": "family",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "07986853-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "friend",
+    "displayForm": "friend",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "10132360-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "home",
+    "displayForm": "home",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "03264208-n",
+    "tier": "T1",
+    "preferredPair": [
+      3378293,
+      3378292
+    ],
+    "preferredSourceSense": "house or structure in which someone lives"
+  },
+  {
+    "lemma": "school",
+    "displayForm": "school",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "08293641-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "work",
+    "displayForm": "work",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "00576778-n",
+    "tier": "T1",
+    "preferredPair": [
+      39569,
+      473027
+    ],
+    "preferredSourceSense": "effort expended on a particular task"
+  },
+  {
+    "lemma": "food",
+    "displayForm": "food",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "00021445-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "water",
+    "displayForm": "water",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "14869913-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "book",
+    "displayForm": "book",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "06422547-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "house",
+    "displayForm": "house",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "03549540-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "car",
+    "displayForm": "car",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "02961779-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "city",
+    "displayForm": "city",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "08542298-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "country",
+    "displayForm": "country",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "08185877-n",
+    "tier": "T1"
+  },
+  {
+    "lemma": "world",
+    "displayForm": "world",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "05817904-n",
+    "tier": "T1",
+    "preferredPair": [
+      2055,
+      503076
+    ],
+    "preferredSourceSense": "collective/subjective human experience"
+  },
+  {
+    "lemma": "good",
+    "displayForm": "good",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "01126910-a",
+    "tier": "T1",
+    "preferredPair": [
+      281554,
+      5696844
+    ],
+    "preferredSourceSense": "useful for a particular purpose"
+  },
+  {
+    "lemma": "bad",
+    "displayForm": "bad",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "01129296-a",
+    "tier": "T1"
+  },
+  {
+    "lemma": "big",
+    "displayForm": "big",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "01385012-a",
+    "tier": "T1"
+  },
+  {
+    "lemma": "small",
+    "displayForm": "small",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "01394303-a",
+    "tier": "T1"
+  },
+  {
+    "lemma": "new",
+    "displayForm": "new",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "01645077-a",
+    "tier": "T1"
+  },
+  {
+    "lemma": "old",
+    "displayForm": "old",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "01642580-a",
+    "tier": "T1",
+    "preferredPair": [
+      1093935,
+      5091667
+    ],
+    "preferredSourceSense": "of an object, concept, etc: having existed for a relatively long period of time"
+  },
+  {
+    "lemma": "happy",
+    "displayForm": "happy",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "01151786-a",
+    "tier": "T1"
+  },
+  {
+    "lemma": "important",
+    "displayForm": "important",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "01278672-a",
+    "tier": "T1"
+  },
+  {
+    "lemma": "easy",
+    "displayForm": "easy",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "00752852-a",
+    "tier": "T1"
+  },
+  {
+    "lemma": "question",
+    "displayForm": "question",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "07211342-n",
+    "tier": "T2"
+  },
+  {
+    "lemma": "answer",
+    "displayForm": "answer",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "06758700-n",
+    "tier": "T2",
+    "preferredPair": [
+      1365620,
+      2082983
+    ],
+    "preferredSourceSense": "response"
+  },
+  {
+    "lemma": "problem",
+    "displayForm": "problem",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "14434009-n",
+    "tier": "T2"
+  },
+  {
+    "lemma": "idea",
+    "displayForm": "idea",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "05842164-n",
+    "tier": "T2",
+    "preferredPair": [
+      42025,
+      1413703
+    ],
+    "preferredSourceSense": "an image of an object that is formed in the mind or recalled by the memory"
+  },
+  {
+    "lemma": "story",
+    "displayForm": "story",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "07235754-n",
+    "tier": "T2"
+  },
+  {
+    "lemma": "place",
+    "displayForm": "place",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "08682181-n",
+    "tier": "T2"
+  },
+  {
+    "lemma": "job",
+    "displayForm": "job",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "00583425-n",
+    "tier": "T2",
+    "preferredPair": [
+      245450,
+      334042
+    ],
+    "preferredSourceSense": "economic role for which a person is paid"
+  },
+  {
+    "lemma": "money",
+    "displayForm": "money",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "13405730-n",
+    "tier": "T2"
+  },
+  {
+    "lemma": "name",
+    "displayForm": "name",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "06344646-n",
+    "tier": "T2"
+  },
+  {
+    "lemma": "room",
+    "displayForm": "room",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "04112987-n",
+    "tier": "T2"
+  },
+  {
+    "lemma": "door",
+    "displayForm": "door",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "03226423-n",
+    "tier": "T2"
+  },
+  {
+    "lemma": "table",
+    "displayForm": "table",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "04386330-n",
+    "tier": "T2"
+  },
+  {
+    "lemma": "teacher",
+    "displayForm": "teacher",
+    "partOfSpeech": "noun",
+    "tier": "T2",
+    "replacementFor": "phone",
+    "preferredPair": [
+      249473,
+      782965
+    ],
+    "preferredSourceSense": "person who teaches",
+    "oewnSynsetId": "10713754-n"
+  },
+  {
+    "lemma": "morning",
+    "displayForm": "morning",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "15190336-n",
+    "tier": "T2"
+  },
+  {
+    "lemma": "night",
+    "displayForm": "night",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "15192074-n",
+    "tier": "T2"
+  },
+  {
+    "lemma": "learn",
+    "displayForm": "learn",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00599310-v",
+    "tier": "T2"
+  },
+  {
+    "lemma": "read",
+    "displayForm": "read",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00626756-v",
+    "tier": "T2"
+  },
+  {
+    "lemma": "write",
+    "displayForm": "write",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "01694952-v",
+    "tier": "T2",
+    "preferredPair": [
+      914377,
+      5794104
+    ],
+    "preferredSourceSense": "to form letters, etc."
+  },
+  {
+    "lemma": "speak",
+    "displayForm": "speak",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00944022-v",
+    "tier": "T2",
+    "preferredPair": [
+      2374109,
+      5780606
+    ],
+    "preferredSourceSense": "to communicate with one's voice using words"
+  },
+  {
+    "lemma": "listen",
+    "displayForm": "listen",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "02174335-v",
+    "tier": "T2"
+  },
+  {
+    "lemma": "help",
+    "displayForm": "help",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "02553283-v",
+    "tier": "T2"
+  },
+  {
+    "lemma": "start",
+    "displayForm": "start",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00346415-v",
+    "tier": "T2"
+  },
+  {
+    "lemma": "finish",
+    "displayForm": "finish",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00485097-v",
+    "tier": "T2"
+  },
+  {
+    "lemma": "busy",
+    "displayForm": "busy",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "00293803-a",
+    "tier": "T2"
+  },
+  {
+    "lemma": "careful",
+    "displayForm": "careful",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "00309819-a",
+    "tier": "T2"
+  },
+  {
+    "lemma": "change",
+    "displayForm": "change",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00126072-v",
+    "tier": "T3",
+    "preferredPair": [
+      1814749,
+      1962050
+    ],
+    "preferredSourceSense": "to make something into something else"
+  },
+  {
+    "lemma": "choose",
+    "displayForm": "choose",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00676526-v",
+    "tier": "T3"
+  },
+  {
+    "lemma": "decide",
+    "displayForm": "decide",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00699355-v",
+    "tier": "T3"
+  },
+  {
+    "lemma": "remember",
+    "displayForm": "remember",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00609334-v",
+    "tier": "T3"
+  },
+  {
+    "lemma": "understand",
+    "displayForm": "understand",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00590283-v",
+    "tier": "T3"
+  },
+  {
+    "lemma": "explain",
+    "displayForm": "explain",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00941308-v",
+    "tier": "T3"
+  },
+  {
+    "lemma": "improve",
+    "displayForm": "improve",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00206293-v",
+    "tier": "T3"
+  },
+  {
+    "lemma": "travel",
+    "displayForm": "travel",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "01849662-v",
+    "tier": "T3"
+  },
+  {
+    "lemma": "build",
+    "displayForm": "build",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "01658171-v",
+    "tier": "T3"
+  },
+  {
+    "lemma": "create",
+    "displayForm": "create",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "01757596-v",
+    "tier": "T3"
+  },
+  {
+    "lemma": "useful",
+    "displayForm": "useful",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "02505612-a",
+    "tier": "T3"
+  },
+  {
+    "lemma": "possible",
+    "displayForm": "possible",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "01826770-a",
+    "tier": "T3"
+  },
+  {
+    "lemma": "different",
+    "displayForm": "different",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "02072149-a",
+    "tier": "T3"
+  },
+  {
+    "lemma": "difficult",
+    "displayForm": "difficult",
+    "partOfSpeech": "adjective",
+    "tier": "T3",
+    "replacementFor": "ready",
+    "oewnSynsetId": "00748528-a",
+    "preferredPair": [
+      12567591,
+      9990198
+    ],
+    "preferredSourceSense": "hard, not easy"
+  },
+  {
+    "lemma": "quiet",
+    "displayForm": "quiet",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "01925383-a",
+    "tier": "T3"
+  },
+  {
+    "lemma": "early",
+    "displayForm": "early",
+    "partOfSpeech": "adverb",
+    "tier": "T3",
+    "replacementFor": "quickly"
+  },
+  {
+    "lemma": "usually",
+    "displayForm": "usually",
+    "partOfSpeech": "adverb",
+    "oewnSynsetId": "00107608-r",
+    "tier": "T3"
+  },
+  {
+    "lemma": "together",
+    "displayForm": "together",
+    "partOfSpeech": "adverb",
+    "oewnSynsetId": "00117495-r",
+    "tier": "T3"
+  },
+  {
+    "lemma": "experience",
+    "displayForm": "experience",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "05766056-n",
+    "tier": "T3"
+  },
+  {
+    "lemma": "language",
+    "displayForm": "language",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "06293304-n",
+    "tier": "T3"
+  },
+  {
+    "lemma": "achieve",
+    "displayForm": "achieve",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "02531751-v",
+    "tier": "T4"
+  },
+  {
+    "lemma": "avoid",
+    "displayForm": "avoid",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00813037-v",
+    "tier": "T4",
+    "preferredPair": [
+      804111,
+      8503017
+    ],
+    "preferredSourceSense": "to keep away from"
+  },
+  {
+    "lemma": "compare",
+    "displayForm": "compare",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00654571-v",
+    "tier": "T4",
+    "preferredPair": [
+      16944,
+      1878271
+    ],
+    "preferredSourceSense": "to assess the similarities"
+  },
+  {
+    "lemma": "describe",
+    "displayForm": "describe",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00989103-v",
+    "tier": "T4"
+  },
+  {
+    "lemma": "follow",
+    "displayForm": "follow",
+    "partOfSpeech": "verb",
+    "tier": "T4",
+    "replacementFor": "develop"
+  },
+  {
+    "lemma": "encourage",
+    "displayForm": "encourage",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "01822202-v",
+    "tier": "T4"
+  },
+  {
+    "lemma": "need",
+    "displayForm": "need",
+    "partOfSpeech": "verb",
+    "tier": "T4",
+    "replacementFor": "manage"
+  },
+  {
+    "lemma": "notice",
+    "displayForm": "notice",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "02122959-v",
+    "tier": "T4",
+    "preferredPair": [
+      2956537,
+      9959718
+    ],
+    "preferredSourceSense": "to become aware of"
+  },
+  {
+    "lemma": "prepare",
+    "displayForm": "prepare",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00407168-v",
+    "tier": "T4"
+  },
+  {
+    "lemma": "protect",
+    "displayForm": "protect",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "01130619-v",
+    "tier": "T4"
+  },
+  {
+    "lemma": "accept",
+    "displayForm": "accept",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "02240906-v",
+    "tier": "T4"
+  },
+  {
+    "lemma": "support",
+    "displayForm": "support",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "02561834-v",
+    "tier": "T4"
+  },
+  {
+    "lemma": "common",
+    "displayForm": "common",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "02159888-s",
+    "tier": "T4",
+    "preferredPair": [
+      25412,
+      333312
+    ],
+    "preferredSourceSense": "mutual"
+  },
+  {
+    "lemma": "clear",
+    "displayForm": "clear",
+    "partOfSpeech": "adjective",
+    "tier": "T4",
+    "replacementFor": "available"
+  },
+  {
+    "lemma": "strong",
+    "displayForm": "strong",
+    "partOfSpeech": "adjective",
+    "tier": "T4",
+    "replacementFor": "confident",
+    "oewnSynsetId": "02328781-a",
+    "preferredPair": [
+      294990,
+      1438528
+    ],
+    "preferredSourceSense": "capable of producing great physical force"
+  },
+  {
+    "lemma": "adapt",
+    "displayForm": "adapt",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "00150107-v",
+    "tier": "T5"
+  },
+  {
+    "lemma": "study",
+    "displayForm": "study",
+    "partOfSpeech": "verb",
+    "tier": "T5",
+    "replacementFor": "analyze",
+    "oewnSynsetId": "00601387-v",
+    "preferredPair": [
+      312750,
+      2370668
+    ],
+    "preferredSourceSense": "to take a course"
+  },
+  {
+    "lemma": "process",
+    "displayForm": "process",
+    "partOfSpeech": "noun",
+    "tier": "T5",
+    "replacementFor": "approach"
+  },
+  {
+    "lemma": "method",
+    "displayForm": "method",
+    "partOfSpeech": "noun",
+    "tier": "T5",
+    "replacementFor": "benefit",
+    "oewnSynsetId": "05668113-n",
+    "preferredPair": [
+      1103154,
+      471007
+    ],
+    "preferredSourceSense": "process by which a task is completed"
+  },
+  {
+    "lemma": "challenge",
+    "displayForm": "challenge",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "13955981-n",
+    "tier": "T5"
+  },
+  {
+    "lemma": "evidence",
+    "displayForm": "evidence",
+    "partOfSpeech": "noun",
+    "oewnSynsetId": "05832256-n",
+    "tier": "T5"
+  },
+  {
+    "lemma": "result",
+    "displayForm": "result",
+    "partOfSpeech": "noun",
+    "tier": "T5",
+    "replacementFor": "maintain"
+  },
+  {
+    "lemma": "require",
+    "displayForm": "require",
+    "partOfSpeech": "verb",
+    "oewnSynsetId": "01191258-v",
+    "tier": "T5",
+    "preferredPair": [
+      13940843,
+      373431
+    ],
+    "preferredSourceSense": "to need"
+  },
+  {
+    "lemma": "reliable",
+    "displayForm": "reliable",
+    "partOfSpeech": "adjective",
+    "oewnSynsetId": "00727525-a",
+    "tier": "T5"
+  },
+  {
+    "lemma": "simple",
+    "displayForm": "simple",
+    "partOfSpeech": "adjective",
+    "tier": "T5",
+    "replacementFor": "specific"
+  }
+]

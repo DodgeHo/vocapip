@@ -1,0 +1,64 @@
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+node_modules
+dist
+dist-ssr
+*.local
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# Generated environments, build products, and runtime state
+.venv/
+__pycache__/
+*.py[cod]
+src-tauri/target/
+test-results/
+playwright-report/
+blob-report/
+artifacts/runtime/
+artifacts/
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Local agent skills and machine-specific setup state
+.agents/
+skills-lock.json
+
+# Reproducible content pipeline source caches are intentionally not published
+content-pipeline/vendor/
+content-pipeline/data/
+content-pipeline/recovery/
+
+# Local recovery snapshots and archives
+recovery/
+
+# Quarantined, unpublished research inputs
+recovery/excluded-unpublished/
+.ui-venv/
+
+# Redistributable content artifacts and maintained pipeline seed
+!language-packs/zh-CN__en.pilot.100/content.sqlite
+!content-pipeline/data/
+content-pipeline/data/*
+!content-pipeline/data/seed-catalog.json
+
+# Local visual verification output
+src/__screenshots/

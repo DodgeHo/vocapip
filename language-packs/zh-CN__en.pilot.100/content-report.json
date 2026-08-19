@@ -1,0 +1,28 @@
+{
+  "aiOrMachineAssistedFactualFieldCount": 0,
+  "humanExpertReviewedCount": 0,
+  "learningReadyCount": 100,
+  "licenseDistribution": {
+    "CC-BY-2.0-FR": 100,
+    "CC-BY-4.0": 100,
+    "CC-BY-SA-4.0": 100
+  },
+  "packId": "zh-CN__en.pilot.100",
+  "partOfSpeechDistribution": {
+    "adjective": 21,
+    "adverb": 3,
+    "noun": 43,
+    "verb": 33
+  },
+  "recordCount": 100,
+  "reviewStatement": "No human expert review is claimed. learningReady means validator-confirmed source completeness and policy compliance.",
+  "schemaVersion": 1,
+  "selectionPolicy": "Exact English lemma and exact simplified Kaikki Mandarin term occur in each linked Tatoeba sentence pair.",
+  "tierDistribution": {
+    "T1": 30,
+    "T2": 25,
+    "T3": 20,
+    "T4": 15,
+    "T5": 10
+  }
+}

@@ -1,0 +1,16 @@
+Third-party software notices
+
+Tauri: Apache-2.0 OR MIT
+React: MIT
+ts-fsrs: MIT
+rusqlite: MIT
+SQLite bundled through libsqlite3-sys: Public Domain
+serde / serde_json: MIT OR Apache-2.0
+chrono: MIT OR Apache-2.0
+uuid: Apache-2.0 OR MIT
+thiserror: MIT OR Apache-2.0
+tauri-plugin-autostart: Apache-2.0 OR MIT
+tauri-plugin-dialog: Apache-2.0 OR MIT
+tauri-plugin-single-instance: Apache-2.0 OR MIT
+
+These notices summarize the components used by the desktop backend. Full license texts remain available in each dependency's source distribution and the project notices.

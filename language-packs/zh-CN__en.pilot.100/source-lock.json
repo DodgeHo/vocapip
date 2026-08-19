@@ -1,0 +1,766 @@
+{
+  "artifacts": [
+    {
+      "bytes": 102,
+      "path": "vendor/cmn_sentences_CC0.2026-08-15.tsv.bz2",
+      "role": "Tatoeba cmn0",
+      "sha256": "72c6ac699497cbc9b75f6c021ef16dfaa91ab760fbb407217902b6b5388401c0"
+    },
+    {
+      "bytes": 1715683,
+      "path": "vendor/cmn_sentences_detailed.2026-08-15.tsv.bz2",
+      "role": "Tatoeba cmn",
+      "sha256": "7634d118f7be3e68a5e43f3da51126dc5db80580db47f25316e16ab6a954b3a2"
+    },
+    {
+      "bytes": 480494,
+      "path": "vendor/eng-cmn_links.2026-08-15.tsv.bz2",
+      "role": "Tatoeba links",
+      "sha256": "d9d4c555b16b9b4731a5c615e4bc2aaf392b555fcca771af3a988e1fc2ab5bd2"
+    },
+    {
+      "bytes": 1288524,
+      "path": "vendor/eng_sentences_CC0.2026-08-15.tsv.bz2",
+      "role": "Tatoeba eng0",
+      "sha256": "6ab169264a28008c25bf63042bf7535fc63137c9d7e09b7b8bd7812d10117d1b"
+    },
+    {
+      "bytes": 34821823,
+      "path": "vendor/eng_sentences_detailed.2026-08-15.tsv.bz2",
+      "role": "Tatoeba eng",
+      "sha256": "bb9760ea462b50fd31d9a3f48e0ca1bc9e5a3c9c3ac2b307244b0fb3f722e576"
+    },
+    {
+      "bytes": 9986555,
+      "path": "vendor/english-wordnet-2025-json.zip",
+      "role": "OEWN lexical source archive",
+      "sha256": "7d749f6e2c39e6970e4997839dcf6e42fd281f3c2fae0171d2192bae8cfa4b51"
+    },
+    {
+      "bytes": 86174,
+      "path": "vendor/enwiktionary-copyrights.2026-08-18.html",
+      "role": "Wiktionary license evidence",
+      "sha256": "83d382ecc6804bc3937441078f3253c1f7fe0f12770b644d1be72fdbe4fb595a"
+    },
+    {
+      "bytes": 84568,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/accept.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "56c4bf8e847e439bb9a7b7c836d4d7ee6ba1f6807edf86fde6682e0522f06431"
+    },
+    {
+      "bytes": 54171,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/achieve.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "75b63429072bb2933dec045b82c49dfb9e3d53de65ece6a3bc2025927dfdbcfb"
+    },
+    {
+      "bytes": 47070,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/adapt.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "f1b3c1e4493768b813680866523e8555c464652e311d2c50235a0a8c7758a0a6"
+    },
+    {
+      "bytes": 127914,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/answer.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "42786c1418cb7d3f45b7334519283c467bb4b8e434d536aac757acb1f7c6161a"
+    },
+    {
+      "bytes": 38921,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/avoid.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "6fb28d725547d9b48fb4166bb86d7d1f2b86878ff27f325cbaeb334c717dd537"
+    },
+    {
+      "bytes": 229009,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/bad.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "4c3408229a91f36e5abf445fd369c52cfaaa15c1c4ab9812ba4f431cab62e186"
+    },
+    {
+      "bytes": 167890,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/big.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "d1eb47ef33ea03caa01031423a39a1369dfbf3049649a5a38823f229343e65c3"
+    },
+    {
+      "bytes": 210758,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/book.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "311e2cbd1e8e17c57a5dd8946905de810b145a69b3ac74d1b5d0570097bf4340"
+    },
+    {
+      "bytes": 86366,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/build.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "4dbe452a05e916f0277526c90f8483bd40b8e6f796297a1003fbb483c902664f"
+    },
+    {
+      "bytes": 56160,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/busy.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "3eff860e68285c2189649e2a0ecd22dfff4649a9d92c6b25ec57737059196f81"
+    },
+    {
+      "bytes": 107234,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/car.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "09d7dc5fd911a0cd39111727bb3d533a0a2adf1abdbda6c09057176d431a51b5"
+    },
+    {
+      "bytes": 24915,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/careful.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "35662cdd36ae9af40cc49862bf8c22f562bbbf6f90f6e9497d02ff6436e2c2b0"
+    },
+    {
+      "bytes": 67370,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/challenge.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "99e4944cbaadf75e3ee591a042435c5dd6df1d2d9eb82d075e8ff07f84192ee4"
+    },
+    {
+      "bytes": 190374,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/change.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "8ec0b41c3b09b50dd6c05a5508a448eae1cb5bba0af3f3062fe8c3b0c4e37061"
+    },
+    {
+      "bytes": 144694,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/child.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "17dfb0147b2ccf9860a999d0bcb49a1b4aacbb28ad3d20dab0658331b22c7e72"
+    },
+    {
+      "bytes": 66293,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/choose.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "594c2f6ef49b616c5331f8ae836b63753c00d6dfcf762ae88396c29271b40662"
+    },
+    {
+      "bytes": 95139,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/city.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "ac9367cc6124454008be082eacd7f3e9aed5465122c477b1c1ee522ed8f04584"
+    },
+    {
+      "bytes": 156293,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/clear.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "ce1349f4e1a4ecafa55b0c3f71ed13d92cdd0605ffe02b0123a6fa5e7ebc420c"
+    },
+    {
+      "bytes": 175938,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/common.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "079bc9dc3054840f623db0998c3b068f8205292ca9dd30e8b002af7985f8ddc0"
+    },
+    {
+      "bytes": 48026,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/compare.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "472cbe561d1fa634d14e52b514166a952d1530bf61fea8397c88cb2b8561019c"
+    },
+    {
+      "bytes": 180675,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/country.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "9fc7e1b468d29a593505c72555c78ddce9c00f8acde1fc18728322a02624c92a"
+    },
+    {
+      "bytes": 53697,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/create.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "771c38aff94b1316494279b214a9c2dbb9f9ff52f4b48b8604230b2f838401d1"
+    },
+    {
+      "bytes": 214717,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/day.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "2eb3b95d57965c6f40d27cef1dc4cee90712b48fb55a541054d93181be52fa2c"
+    },
+    {
+      "bytes": 38456,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/decide.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "ebaa893e1f5f50b35efaf4e5b0da1a9c7f15bf85dac5fe793ddfe3224463247e"
+    },
+    {
+      "bytes": 31136,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/describe.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "af7710bea0818d7cf3411c67e57d287e9adc3d02784f75fd9dd5289774ff91b4"
+    },
+    {
+      "bytes": 71087,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/different.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "6f69e77369871f097c055dbcc66768d8d76ef730c7e16a35e208ddad1c50051d"
+    },
+    {
+      "bytes": 45749,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/difficult.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "ddbe2197fc0c8cada3c925e2b94f84e93a22574ea4b046da974d98e953f1b5a3"
+    },
+    {
+      "bytes": 129042,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/door.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "a4524aee9ddd62b6f19139ffa721c38b2423f865a87455ccb90433757a73ae10"
+    },
+    {
+      "bytes": 73291,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/early.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "509e8656840d1a7fe513ee03f49ae94f577bed204a60ac03c9a34d63d934fda8"
+    },
+    {
+      "bytes": 94759,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/easy.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "f078834e70165c6d79a8f6330e090bae8c9b6da2bb7aa4bb2d589ce3e51dbaf3"
+    },
+    {
+      "bytes": 33288,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/encourage.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "815dc18b193f3665645cfc13a65f4b956759c6b73b96920195f5ebb21d3272e9"
+    },
+    {
+      "bytes": 48656,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/evidence.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "f1651076d9b04564c416f2f766593ead948868152ca61e874a964e25cdbdce2a"
+    },
+    {
+      "bytes": 82895,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/experience.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "2aae7245ca022dc3c788a24946b8018ea7f91e2fde5201e3d26f70e946f22227"
+    },
+    {
+      "bytes": 36570,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/explain.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "58f9939420bfa7f3d9f1e9517fdf30326ac9155b80e70000dde5e8a708e5f094"
+    },
+    {
+      "bytes": 162955,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/family.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "e7e400d029fbdf7ef71777d32880e85e171285aed03047d93367633ec9b8f287"
+    },
+    {
+      "bytes": 69475,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/finish.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "ec00824c7f478a75204cf2f8dff0e454e8a921c60ba4ad0959690442aa979649"
+    },
+    {
+      "bytes": 76246,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/follow.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "3a882ed4f73a005d9df8fc582ed5d09f5cbc72491fdf8fc32c03624cfc63d4d4"
+    },
+    {
+      "bytes": 118302,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/food.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "edaef005e6462c94a04193c9397b769576b697ff1754e57824a1f547054c72ea"
+    },
+    {
+      "bytes": 200834,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/friend.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "f6a030487e95224113c8e2618b4c3975cd644e748b3fc920d3688df0a94e62ea"
+    },
+    {
+      "bytes": 244125,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/good.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "cc5ac1907ba35079119690b970159208d996b461fabffbc772692eb065f870ca"
+    },
+    {
+      "bytes": 121877,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/happy.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "b6a5293b93a9af4d1e725924937fd0f8bd5195bf102bdd1bc7036dd108e906d2"
+    },
+    {
+      "bytes": 173729,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/help.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "c2daf812b784cf8a0a8cb4137bd9d2a07a237691e0476ae9271a9997ec349561"
+    },
+    {
+      "bytes": 211326,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/home.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "16e8a8d45e5dc5334b5e673d91f4f2db561dd32ebe08b400e9d7f0584a2cf4a8"
+    },
+    {
+      "bytes": 196901,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/house.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "71780872fffb50307567646eff499b56da42cfdb84c8a40bd9b8f2c01ec5b2e3"
+    },
+    {
+      "bytes": 74395,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/idea.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "257f41268615c46e3fc14d9e74620d031444fe873b52ae2d9fac96d69deb4fdf"
+    },
+    {
+      "bytes": 35325,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/important.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "81147b9afa713d2c9b7c2cebe3e79aaa1b018003443f2182084df87f5faf7f1d"
+    },
+    {
+      "bytes": 45806,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/improve.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "c1b40eb579ac885bf0e8ba4fe0af16cf4cbc9fb8d07f3d581952d574d7e4920d"
+    },
+    {
+      "bytes": 101254,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/job.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "98dd89d3fce20a395e7417438e6fdb469338edf34a3bd0551dd2de85748f4e26"
+    },
+    {
+      "bytes": 257400,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/language.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "2b4e4c99e1f379382db2da54bec6c2059320a0fc10461de14d0b45fd5e25d57b"
+    },
+    {
+      "bytes": 81818,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/learn.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "fc44327caa9cf0167b5d12a8fb195d5f25954dfb62a41e90e826622b9c495c71"
+    },
+    {
+      "bytes": 105220,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/listen.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "93fef6d8a9d54119917a494267dd7c223f1f5d5a419fe92e4e71a6cb3392a652"
+    },
+    {
+      "bytes": 273559,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/man.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "bd41925984358537d2394004d629062d7577df6a0cb2d84defa8de82a74adcff"
+    },
+    {
+      "bytes": 81968,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/method.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "e161086de5a70bc7ad20bb898c0b59d091cd14846c88d4e432133ddda42ed6e3"
+    },
+    {
+      "bytes": 149781,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/money.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "ef747ecd45d0b61500b0a4ec29e0233924430896e2c55fedbd8ffe857855c2b8"
+    },
+    {
+      "bytes": 107296,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/morning.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "078cbff777276d62812b7431064e0f794dc69cc21daf7147c204d87183e05c76"
+    },
+    {
+      "bytes": 212573,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/name.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "786b07d8f17e62f41103170a89fceede9bf9a1a095e789ce03844d7446d40d67"
+    },
+    {
+      "bytes": 76111,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/need.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "e82885fc7249d00ed0ecaa7b77b408afa3408300b1b1c159beb2eb12a245e2c2"
+    },
+    {
+      "bytes": 211612,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/new.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "7e33b92d1a3b50c876e871946a6c27b2bf590865aaeb9af89cb1e3591df8eb70"
+    },
+    {
+      "bytes": 196562,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/night.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "50d0fb3dc4bc074c5ef76188687c3e83530dbd372d0a0ef8701a965e6a5d6ca3"
+    },
+    {
+      "bytes": 72009,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/notice.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "ccaace44decb2c44518d6772b183f012eef5e4349eaee402299b8304fd6c1cc1"
+    },
+    {
+      "bytes": 175571,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/old.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "8adab16b74bbbb24ff25ef7d5460df4c8bf6387f4eabff92d16aeb9a057b7daa"
+    },
+    {
+      "bytes": 154195,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/person.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "46ed7fe5984b5a14645932c6015330b310609c98245b1be47490827d880e0f4d"
+    },
+    {
+      "bytes": 171026,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/place.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "3ed1a406fa62d3b331dd1eb18f7b0076a3f6c65ac356a55d3c134312d1ad323b"
+    },
+    {
+      "bytes": 40442,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/possible.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "01ef86e7cfdbdebb3f57ef3fd426449d6109300ea9b8c656677ab338e09f756c"
+    },
+    {
+      "bytes": 56483,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/prepare.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "80fa33a6c6e9d085f0b8e5fabb1766e733c4b9ea43e13761bee5d84e5c550af4"
+    },
+    {
+      "bytes": 69348,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/problem.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "c51f37ee3b957c3d477d819dc74a9eeab5f9809732f7f7f36e98205ba47d2c3e"
+    },
+    {
+      "bytes": 71263,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/process.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "71582012cc6a3819de4cdc06b57bca0cc4eb8be1455ffb9182d4e49ea6e0a50f"
+    },
+    {
+      "bytes": 23799,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/protect.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "20081266442ebe25ba5495e64799b0d52f7378318a5adebd990b2ac5dbeabd2d"
+    },
+    {
+      "bytes": 98351,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/question.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "b5d565565cbae9c3e786d65a8fa62c1c8e7cd1802254d3e510e0be3507da294d"
+    },
+    {
+      "bytes": 115903,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/quiet.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "f5cedbf95cadffde70c41f53639a7913f1b461ab93b678bb282fdc088524e072"
+    },
+    {
+      "bytes": 153446,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/read.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "0be28e2c561a455fc96474fe4d5f159214d7a0196e406be4cacf37041255df3a"
+    },
+    {
+      "bytes": 21514,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/reliable.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "4fb40820df4c7474deb9a969717b461662887634cb68a1704ddbb3859c4e171c"
+    },
+    {
+      "bytes": 75674,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/remember.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "80295120c31e30923128fdfaf2db3027e555bad3d44de3104361aaab570d8ee9"
+    },
+    {
+      "bytes": 20133,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/require.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "f9b5e7c8de2cc2bd83ba880458f7521389ae5f65a2f966c36bd1e993e1095e26"
+    },
+    {
+      "bytes": 63169,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/result.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "b1a3236c16c1daf2a9c92f260976da3340d1395ee21be0e6a656f48268b54795"
+    },
+    {
+      "bytes": 139392,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/room.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "cdab19623f8c91e15b472b52b4320acbc061d7273670a622dd42682531716f05"
+    },
+    {
+      "bytes": 196837,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/school.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "62cac412ebae80aefeac997982e6bcac3454d77c3876160955b3a692f6745993"
+    },
+    {
+      "bytes": 117460,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/simple.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "cbffd71a21277a40e290dc2d2820d4d48fc9d45ec26418713941855b08e2e097"
+    },
+    {
+      "bytes": 157732,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/small.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "8c283dd370e73b792fb002bf47e7c279b53e55d331d99d8ae0eb3bf6d103687d"
+    },
+    {
+      "bytes": 144089,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/speak.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "a9307e9bfe4b1fdbe16258cae4e99791a249d12cc2f62ba9d50bb667a0bf977c"
+    },
+    {
+      "bytes": 124534,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/start.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "7504b02bdbcdbe66456b10e7076c3773b63c72a7272b9e944d4d4cd207088def"
+    },
+    {
+      "bytes": 93030,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/story.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "0892e0707443013cdd41a3c2df4a11d9af39022a00d02772eb83667375c6df79"
+    },
+    {
+      "bytes": 135464,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/strong.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "0b1b75af6663a2f1c12775579a66c3bad0b619deb94dff9df5192f6f4122512b"
+    },
+    {
+      "bytes": 120038,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/study.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "c276e67ccd969f8872ab32399c56b2d4f215e846c302c9965f552e51777f9f31"
+    },
+    {
+      "bytes": 96677,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/support.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "6e0c0a023d6d2af4e0577c2942f8edb3202d76b93ecf45cca041ecea6f099b90"
+    },
+    {
+      "bytes": 132902,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/table.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "2e5e82c5743f7c3cef53664597eafa679faceef1356ca6f4fc2eeb69feaaf18a"
+    },
+    {
+      "bytes": 83290,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/teacher.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "4da70b1c8c1cfcd5476d3742842fc17cdfd207b468bbf4c84e548268a06ac7fb"
+    },
+    {
+      "bytes": 120360,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/thing.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "1b62316b012f75a3b14fbbc6e8689929e250d49e3e0d0b789c6960f5dab2ad0e"
+    },
+    {
+      "bytes": 380196,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/time.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "92e9017cc0bdb0be604452f075181f32b4c1f743815bfc6070d8f0d884b186f6"
+    },
+    {
+      "bytes": 73690,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/together.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "95249e31104d59051cd702bec55a1cb4c68c2d0a24c61a03554e63f826e94af9"
+    },
+    {
+      "bytes": 70290,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/travel.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "24de1a3322ec7e25b2e32e31f4c842258544d7dd8497a71973420c120accee55"
+    },
+    {
+      "bytes": 80102,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/understand.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "baab0369b89379e7be3a5264482df713700579a4e50951a2d4172fe5f8c9252e"
+    },
+    {
+      "bytes": 26595,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/useful.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "29541ebb956b935b974331c33faeb2f8300f9b88be039eee62a24a2c857b6436"
+    },
+    {
+      "bytes": 16273,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/usually.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "c8b0536e3ce5f8f505542f546d708b664dfc38aa1680433202313cd75d957292"
+    },
+    {
+      "bytes": 740467,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/water.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "c8a5866e6dba1cab8e2949d07f905a5f46f1b6b01a1a3c70672b048076ae6d6e"
+    },
+    {
+      "bytes": 288388,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/woman.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "93e7bf4179e14f53591086662f457d6304a64b8b715a4f8559fb37a4278f4132"
+    },
+    {
+      "bytes": 273250,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/work.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "9d6cc098d7c1ea6b28b8591572b0726e36880c69c28e03e07271969153798052"
+    },
+    {
+      "bytes": 162962,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/world.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "4cde41a6ffc5c4b80daf00618272f359a178c56e909165e18a6e4e907f8a6a73"
+    },
+    {
+      "bytes": 96797,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/write.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "ac63a9bbc9c546d825d2fc852459ce3c49f55395dcab1b6cac0a7a1238f451ac"
+    },
+    {
+      "bytes": 158621,
+      "path": "vendor/kaikki-enwiktionary-2026-08-05-selected/year.jsonl",
+      "role": "Kaikki per-word Wiktextract JSONL",
+      "sha256": "5323a74a2b271c54e7bc0a2a8f461a98c647a2422070802594648f1d69b5b1df"
+    },
+    {
+      "bytes": 2625665,
+      "path": "vendor/kaikki-time.html",
+      "role": "Kaikki extraction metadata",
+      "sha256": "64a412c25d52423767fb86423ac63d7448e8f11046cbadd61efdcb8782be83ad"
+    },
+    {
+      "bytes": 316138,
+      "path": "vendor/tatoeba-downloads.2026-08-18.html",
+      "role": "Tatoeba export evidence",
+      "sha256": "91f1467b65cb57d3a82c956932077c72c43c98fa8e47eca3233166c51ab7c5ff"
+    },
+    {
+      "bytes": 88171,
+      "path": "vendor/tatoeba-terms-of-use.2026-08-18.html",
+      "role": "Tatoeba license evidence",
+      "sha256": "f3e46eaac2d25bfacaab4e3cb834bd5252bb3df6367dd9da932bf46ec5ca2c22"
+    },
+    {
+      "bytes": 56834549,
+      "path": "vendor/wordfreq-3.1.1-py3-none-any.whl",
+      "role": "wordfreq wheel and frequency data",
+      "sha256": "4b1c6ecffc6198be3396d5cf871c4423ca71c907c231348d352dd54d62b97473"
+    }
+  ],
+  "generatedAt": "2026-08-18",
+  "policy": {
+    "forbiddenPublishedSources": [
+      "ECDICT",
+      "KVL-Chinese",
+      "OMW/Chinese Open WordNet",
+      "unknown-license data",
+      "AI-generated factual content"
+    ],
+    "licenseAllowlist": [
+      "Apache-2.0",
+      "CC-BY-2.0-FR",
+      "CC-BY-4.0",
+      "CC-BY-SA-4.0",
+      "CC0-1.0"
+    ],
+    "omwPolicy": "OMW is not a published source. Published record provenance containing OMW markers is rejected.",
+    "publishedSourceAllowlist": [
+      "kaikki-enwiktionary-2026-08-05",
+      "languagepet-pilot-tiering-v1",
+      "oewn-2025",
+      "tatoeba-2026-08-15",
+      "wordfreq-3.1.1"
+    ],
+    "unknownLicenses": "reject"
+  },
+  "schemaVersion": 1,
+  "sources": [
+    {
+      "commit": "dc343f2683279ecbb13fab4e2fd778d7b162d287",
+      "id": "oewn-2025",
+      "license": "CC-BY-4.0",
+      "name": "Open English WordNet 2025 Edition",
+      "publishedFields": [
+        "lemma",
+        "displayForm",
+        "partOfSpeech",
+        "oewnSynsetId",
+        "oewnDefinition"
+      ],
+      "url": "https://github.com/globalwordnet/english-wordnet/tree/dc343f2683279ecbb13fab4e2fd778d7b162d287",
+      "version": "2025"
+    },
+    {
+      "dumpDate": "2026-08-05",
+      "extractedAt": "2026-08-16",
+      "id": "kaikki-enwiktionary-2026-08-05",
+      "license": "CC-BY-SA-4.0",
+      "name": "Kaikki English Wiktionary extract",
+      "publishedFields": [
+        "zhGloss",
+        "translationSense"
+      ],
+      "url": "https://kaikki.org/dictionary/English/",
+      "wikitextprocessorCommit": "4deed5191c9e4cb61ee1a4c822e3f6686ae8541b",
+      "wiktextractCommit": "872fc7bfc15c388eca84591268d6f35759c42290"
+    },
+    {
+      "id": "tatoeba-2026-08-15",
+      "licenses": [
+        "CC-BY-2.0-FR",
+        "CC0-1.0"
+      ],
+      "name": "Tatoeba sentence and link exports",
+      "publishedFields": [
+        "exampleEn",
+        "exampleZh",
+        "sentencePairLink"
+      ],
+      "snapshotDate": "2026-08-15",
+      "termsUrl": "https://tatoeba.org/en/terms_of_use",
+      "url": "https://tatoeba.org/en/downloads"
+    },
+    {
+      "frequencyDataLicense": "CC-BY-SA-4.0",
+      "id": "wordfreq-3.1.1",
+      "name": "wordfreq",
+      "publishedFields": [
+        "frequency.zipf"
+      ],
+      "softwareLicense": "Apache-2.0",
+      "url": "https://pypi.org/project/wordfreq/3.1.1/",
+      "version": "3.1.1"
+    },
+    {
+      "id": "languagepet-pilot-tiering-v1",
+      "license": "CC0-1.0",
+      "name": "LanguagePet deterministic pilot tier assignment",
+      "publishedFields": [
+        "tier",
+        "learningReady"
+      ],
+      "url": "urn:languagepet:pilot-tiering:v1",
+      "version": "1"
+    }
+  ]
+}

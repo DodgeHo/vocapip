@@ -1,0 +1,31 @@
+{
+  "compatibilityVersion": 1,
+  "content": {
+    "records": "records.jsonl",
+    "recordsSha256": "2903b10b3982367c023dee145889bdc55facd1dfe0e1841448b5f6e9fc71277c",
+    "sqlite": "content.sqlite",
+    "sqliteSha256": "06e86c60ebdb1330eb63e809a1adb0aef69be0205cd5b867fdd3422cf343f44a"
+  },
+  "explanationLanguage": "zh-CN",
+  "learningReadyCount": 100,
+  "licenseFiles": [
+    "LICENSES.md",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "offlineOnly": true,
+  "packId": "zh-CN__en.pilot.100",
+  "packVersion": "0.1.0",
+  "recordCount": 100,
+  "runtimeNetworkRequired": false,
+  "schemaVersion": 1,
+  "sourceLanguage": "zh-CN",
+  "sourceLock": "source-lock.json",
+  "targetLanguage": "en",
+  "tierDistribution": {
+    "T1": 30,
+    "T2": 25,
+    "T3": 20,
+    "T4": 15,
+    "T5": 10
+  }
+}

@@ -1,0 +1,7 @@
+Bundled zh-CN to English pilot language pack
+
+Pack id: zh-CN__en.pilot
+Pack version: 0.1.0
+Compatibility version: 1
+
+The pack manifest records a license, source identifier, source URL, and field-level provenance for every record. The importer rejects empty provenance, unknown licenses, incomplete fields, duplicate IDs, and unsupported schema versions. Consult the bundled language-pack JSON for per-record attribution.

@@ -1,0 +1,10 @@
+dist/
+node_modules/
+src-tauri/target/
+content-pipeline/.venv/
+recovery/
+artifacts/
+package-lock.json
+src-tauri/Cargo.lock
+language-packs/**/*.json
+src-tauri/resources/language-packs/**/*.json
