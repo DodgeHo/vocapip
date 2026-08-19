@@ -13,6 +13,10 @@ VocaPip 是一个面向 Windows 10/11 x64 的纯离线英语词汇桌宠。应�
 - 100 条可审计 zh-CN -> en 验证语言包，包含字段级 provenance 和锁定来源。
 - 运行时 CSP 禁止网络连接；不集成遥测、更新检查、在线词典、WebSocket 或 AI 请求。
 
+## 下载
+
+Windows 10/11 x64 安装包、便携版和 SHA-256 校验文件见 [VocaPip 0.1.0 Release](https://github.com/DodgeHo/vocapip/releases/tag/v0.1.0)。当前二进制未签名，Windows SmartScreen 可能显示警告；运行前请核对 Release 中的 `SHA256SUMS.txt`。
+
 ## 开发运行
 
 环境需要 Node.js、Rust MSVC 工具链、WebView2 和 Windows SDK。

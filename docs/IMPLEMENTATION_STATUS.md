@@ -68,6 +68,8 @@ Last updated: 2026-08-19 (Asia/Taipei)
 | 2026-08-19 | Content pipeline unittest discovery and 100-record validation | PASS; 3/3 tests and fail-closed language-pack validation. |
 | 2026-08-19 | scripts/verify-offline.ps1 | PASS; no runtime network APIs or permissions detected. |
 | 2026-08-19 | npm run tauri:build | PASS; VocaPip executable, NSIS installer, and MSI package generated. |
+| 2026-08-19 | Public GitHub repository | PASS; https://github.com/DodgeHo/vocapip is PUBLIC with main as the default branch. Initial release commit: 8e34f131570250701635d6f14d450c8d6654bcc1. |
+| 2026-08-19 | GitHub Release v0.1.0 | PASS; non-draft, non-prerelease release published with EXE, NSIS, MSI, portable ZIP, and SHA256SUMS.txt. |
 
 ## Build artifacts
 
@@ -76,6 +78,8 @@ Last updated: 2026-08-19 (Asia/Taipei)
 - NSIS installer: src-tauri/target/release/bundle/nsis/VocaPip_0.1.0_x64-setup.exe
 - MSI installer: src-tauri/target/release/bundle/msi/VocaPip_0.1.0_x64_zh-CN.msi
 - Release staging: artifacts/release/v0.1.0/ (ignored from Git; includes installers, raw executable, portable ZIP, release notes, and SHA-256 checksums).
+- Public repository: https://github.com/DodgeHo/vocapip
+- GitHub Release: https://github.com/DodgeHo/vocapip/releases/tag/v0.1.0
 
 ## Known limitations
 
