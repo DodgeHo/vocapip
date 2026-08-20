@@ -94,6 +94,7 @@ export interface AppSettings {
   speechEnabled: boolean;
   petAppearanceId: PetAppearanceId;
   quietModeUntil?: string;
+  updatedAt?: string;
 }
 export interface BootstrapPayload {
   progress: PlayerProgress;

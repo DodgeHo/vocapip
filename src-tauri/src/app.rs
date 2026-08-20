@@ -1,5 +1,6 @@
 use crate::db::DbState;
 use crate::error::{AppError, AppResult};
+use crate::models::AppSettings;
 use crate::repository;
 use chrono::{DateTime, Duration as ChronoDuration, Local, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -14,8 +15,13 @@ use tauri::{
     App, AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, WebviewUrl,
     WebviewWindowBuilder,
 };
+use tauri_plugin_autostart::ManagerExt;
 
 pub const MAIN_WINDOW: &str = "main";
+pub const SETTINGS_CHANGED_EVENT: &str = "vocapip://settings-changed";
+pub const PET_ASSETS_CHANGED_EVENT: &str = "vocapip://pet-assets-changed";
+pub const PET_APPEARANCE_CHANGED_EVENT: &str = "vocapip://pet-appearance-changed";
+pub const BACKUP_IMPORTED_EVENT: &str = "vocapip://backup-imported";
 
 const PET_MENU_LEARN: &str = "pet_learn";
 const PET_MENU_ALWAYS_ON_TOP: &str = "pet_always_on_top";
@@ -318,6 +324,113 @@ pub fn set_main_always_on_top(app: &AppHandle, enabled: bool) -> AppResult<()> {
     Ok(())
 }
 
+fn set_native_autostart(app: &AppHandle, enabled: bool) -> AppResult<()> {
+    let result = if enabled {
+        app.autolaunch().enable()
+    } else {
+        app.autolaunch().disable()
+    };
+    result
+        .map_err(|error| AppError::Resource(format!("autostart native operation failed: {error}")))
+}
+
+pub fn synchronize_native_settings(
+    app: &AppHandle,
+    previous: &AppSettings,
+    next: &AppSettings,
+) -> AppResult<()> {
+    let mut autostart_changed = false;
+    if previous.autostart != next.autostart {
+        set_native_autostart(app, next.autostart)?;
+        autostart_changed = true;
+    }
+
+    if previous.always_on_top != next.always_on_top {
+        if let Err(error) = set_main_always_on_top(app, next.always_on_top) {
+            let compensation = if autostart_changed {
+                set_native_autostart(app, previous.autostart).err()
+            } else {
+                None
+            };
+            return Err(match compensation {
+                Some(compensation) => AppError::Resource(format!(
+                    "always-on-top native operation failed: {error}; autostart compensation failed: {compensation}"
+                )),
+                None => AppError::Resource(format!(
+                    "always-on-top native operation failed: {error}"
+                )),
+            });
+        }
+    }
+    Ok(())
+}
+
+pub fn restore_native_settings(
+    app: &AppHandle,
+    previous: &AppSettings,
+    current: &AppSettings,
+) -> AppResult<()> {
+    let mut failures = Vec::new();
+    if previous.autostart != current.autostart {
+        if let Err(error) = set_native_autostart(app, previous.autostart) {
+            failures.push(format!("autostart compensation failed: {error}"));
+        }
+    }
+    if previous.always_on_top != current.always_on_top {
+        if let Err(error) = set_main_always_on_top(app, previous.always_on_top) {
+            failures.push(format!("always-on-top compensation failed: {error}"));
+        }
+    }
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(AppError::Resource(failures.join("; ")))
+    }
+}
+
+pub fn persist_always_on_top(app: &AppHandle, state: &DbState, enabled: bool) -> AppResult<bool> {
+    let _guard = state
+        .write_lock
+        .lock()
+        .map_err(|_| AppError::Resource("database write lock is poisoned".into()))?;
+    let connection = state.connect()?;
+    persist_always_on_top_with_connection(app, &connection, enabled)
+}
+
+pub fn toggle_always_on_top(app: &AppHandle, state: &DbState) -> AppResult<bool> {
+    let _guard = state
+        .write_lock
+        .lock()
+        .map_err(|_| AppError::Resource("database write lock is poisoned".into()))?;
+    let connection = state.connect()?;
+    let previous = repository::read_settings(&connection)?;
+    persist_always_on_top_with_connection(app, &connection, !previous.always_on_top)
+}
+
+fn persist_always_on_top_with_connection(
+    app: &AppHandle,
+    connection: &rusqlite::Connection,
+    enabled: bool,
+) -> AppResult<bool> {
+    let previous = repository::read_settings(connection)?;
+    if previous.always_on_top == enabled {
+        return Ok(enabled);
+    }
+    set_main_always_on_top(app, enabled)?;
+    if let Err(error) =
+        repository::set_boolean_setting_with_connection(connection, "always_on_top", enabled)
+    {
+        let compensation = set_main_always_on_top(app, previous.always_on_top).err();
+        return Err(match compensation {
+            Some(compensation) => AppError::Resource(format!(
+                "always-on-top database write failed: {error}; native compensation failed: {compensation}"
+            )),
+            None => AppError::Resource(format!("always-on-top database write failed: {error}")),
+        });
+    }
+    Ok(enabled)
+}
+
 pub fn show_main_window(app: &AppHandle) -> AppResult<()> {
     let window = app
         .get_webview_window(MAIN_WINDOW)
@@ -503,31 +616,38 @@ pub fn open_or_focus_window(app: &AppHandle, view: &str) -> AppResult<()> {
 
 fn toggle_context_always_on_top(app: &AppHandle) -> AppResult<()> {
     let state = app.state::<DbState>();
-    let settings = state
-        .connect()
-        .and_then(|connection| repository::read_settings(&connection))?;
-    let enabled = !settings.always_on_top;
-    set_main_always_on_top(app, enabled)?;
-    repository::set_boolean_setting(&state, "always_on_top", enabled)?;
+    let persisted = toggle_always_on_top(app, &state)?;
     app.emit_to(
         MAIN_WINDOW,
         "vocapip://pet-action",
         PetActionEvent {
             action: "always-on-top",
-            enabled: Some(enabled),
+            enabled: Some(persisted),
             paused: None,
         },
+    )?;
+    app.emit(
+        SETTINGS_CHANGED_EVENT,
+        serde_json::json!({ "alwaysOnTop": persisted }),
     )?;
     Ok(())
 }
 
 fn toggle_context_reminders(app: &AppHandle) -> AppResult<()> {
     let state = app.state::<DbState>();
-    let settings = state
-        .connect()
-        .and_then(|connection| repository::read_settings(&connection))?;
-    let paused = !settings.reminders_paused;
-    repository::set_boolean_setting(&state, "reminders_paused", paused)?;
+    let paused = {
+        let _guard = state
+            .write_lock
+            .lock()
+            .map_err(|_| AppError::Resource("database write lock is poisoned".into()))?;
+        let connection = state.connect()?;
+        let settings = repository::read_settings(&connection)?;
+        repository::set_boolean_setting_with_connection(
+            &connection,
+            "reminders_paused",
+            !settings.reminders_paused,
+        )?
+    };
     app.emit_to(
         MAIN_WINDOW,
         "vocapip://pet-action",
@@ -536,6 +656,10 @@ fn toggle_context_reminders(app: &AppHandle) -> AppResult<()> {
             enabled: None,
             paused: Some(paused),
         },
+    )?;
+    app.emit(
+        SETTINGS_CHANGED_EVENT,
+        serde_json::json!({ "remindersPaused": paused }),
     )?;
     Ok(())
 }
@@ -761,6 +885,7 @@ mod tests {
             speech_enabled: false,
             pet_appearance_id: "mint".into(),
             quiet_mode_until: None,
+            updated_at: Some("test-version".into()),
         }
     }
 

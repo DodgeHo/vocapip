@@ -70,6 +70,7 @@ test("settings remain usable after the renderer goes offline", async ({
   await expect(page.getByRole("heading", { name: "设置" })).toBeVisible();
   await page.context().setOffline(true);
   await page.getByRole("switch", { name: "桌宠始终置顶" }).click();
-  await expect(page.getByText("已立即应用")).toBeVisible();
+  await page.getByRole("button", { name: "保存设置" }).click();
+  await expect(page.getByText("已保存")).toBeVisible();
   await expect(page.getByText("纯离线")).toBeVisible();
 });

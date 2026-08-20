@@ -490,13 +490,48 @@ pub fn queue_relearn(state: &DbState, card_id: &str) -> AppResult<LearningCard> 
     get_card(&connection, card_id)
 }
 
-pub fn update_settings(state: &DbState, settings: &AppSettings) -> AppResult<AppSettings> {
+pub fn update_settings_with_connection(
+    connection: &Connection,
+    settings: &AppSettings,
+) -> AppResult<AppSettings> {
+    validate_settings_with_connection(connection, settings)?;
+    let transaction = connection.unchecked_transaction()?;
+    transaction.execute(
+        "UPDATE settings SET reminder_interval_minutes = ?1, daily_quota = ?2, quiet_hours_enabled = ?3,
+          quiet_start = ?4, quiet_end = ?5, autostart = ?6, always_on_top = ?7, language_pack_id = ?8,
+          reminders_paused = ?9, quiet_mode_until = ?10, speech_enabled = ?11, pet_appearance_id = ?12,
+          updated_at = ?13 WHERE id = 1",
+        params![settings.reminder_interval_minutes, settings.daily_quota, settings.quiet_hours_enabled as i64,
+            settings.quiet_start, settings.quiet_end, settings.autostart as i64, settings.always_on_top as i64,
+            settings.language_pack_id, settings.reminders_paused as i64, settings.quiet_mode_until,
+            settings.speech_enabled as i64, settings.pet_appearance_id,
+            Utc::now().to_rfc3339()],
+    )?;
+    transaction.execute(
+        "UPDATE learner_profile SET active_pack_id = ?1, updated_at = ?2 WHERE id = 1",
+        params![settings.language_pack_id, Utc::now().to_rfc3339()],
+    )?;
+    let saved = read_settings(&transaction)?;
+    transaction.commit()?;
+    Ok(saved)
+}
+
+pub fn validate_settings_version(previous: &AppSettings, requested: &AppSettings) -> AppResult<()> {
+    if let Some(expected) = requested.updated_at.as_deref() {
+        if previous.updated_at.as_deref() != Some(expected) {
+            return Err(AppError::InvalidData(
+                "settings changed in another window; reload before saving".into(),
+            ));
+        }
+    }
+    Ok(())
+}
+
+pub fn validate_settings_with_connection(
+    connection: &Connection,
+    settings: &AppSettings,
+) -> AppResult<()> {
     validate_settings(settings)?;
-    let _guard = state
-        .write_lock
-        .lock()
-        .map_err(|_| AppError::Resource("database write lock is poisoned".into()))?;
-    let connection = state.connect()?;
     let pack_exists: bool = connection.query_row(
         "SELECT EXISTS(SELECT 1 FROM language_packs WHERE id = ?1)",
         [&settings.language_pack_id],
@@ -508,25 +543,31 @@ pub fn update_settings(state: &DbState, settings: &AppSettings) -> AppResult<App
             settings.language_pack_id
         )));
     }
-    connection.execute(
-        "UPDATE settings SET reminder_interval_minutes = ?1, daily_quota = ?2, quiet_hours_enabled = ?3,
-          quiet_start = ?4, quiet_end = ?5, autostart = ?6, always_on_top = ?7, language_pack_id = ?8,
-          reminders_paused = ?9, quiet_mode_until = ?10, speech_enabled = ?11, pet_appearance_id = ?12,
-          updated_at = ?13 WHERE id = 1",
-        params![settings.reminder_interval_minutes, settings.daily_quota, settings.quiet_hours_enabled as i64,
-            settings.quiet_start, settings.quiet_end, settings.autostart as i64, settings.always_on_top as i64,
-            settings.language_pack_id, settings.reminders_paused as i64, settings.quiet_mode_until,
-            settings.speech_enabled as i64, settings.pet_appearance_id,
-            Utc::now().to_rfc3339()],
-    )?;
-    connection.execute(
-        "UPDATE learner_profile SET active_pack_id = ?1, updated_at = ?2 WHERE id = 1",
-        params![settings.language_pack_id, Utc::now().to_rfc3339()],
-    )?;
-    read_settings(&connection)
+    if !matches!(
+        settings.pet_appearance_id.as_str(),
+        "mint" | "coral" | "sun" | "night" | "custom"
+    ) {
+        return Err(AppError::InvalidData(format!(
+            "unknown pet appearance {}",
+            settings.pet_appearance_id
+        )));
+    }
+    if settings.pet_appearance_id == "custom" {
+        let has_default: bool = connection.query_row(
+            "SELECT EXISTS(SELECT 1 FROM pet_assets WHERE appearance_id = 'custom' AND state = 'default')",
+            [],
+            |row| row.get(0),
+        )?;
+        if !has_default {
+            return Err(AppError::InvalidData(
+                "custom pet appearance requires a default image".into(),
+            ));
+        }
+    }
+    Ok(())
 }
 
-fn validate_settings(settings: &AppSettings) -> AppResult<()> {
+pub fn validate_settings(settings: &AppSettings) -> AppResult<()> {
     if !(5..=240).contains(&settings.reminder_interval_minutes) {
         return Err(AppError::InvalidData(
             "reminderIntervalMinutes must be between 5 and 240".into(),
@@ -561,6 +602,18 @@ pub fn set_boolean_setting(state: &DbState, column: &str, enabled: bool) -> AppR
         .lock()
         .map_err(|_| AppError::Resource("database write lock is poisoned".into()))?;
     let connection = state.connect()?;
+    set_boolean_setting_with_connection(&connection, column, enabled)
+}
+
+pub fn set_boolean_setting_with_connection(
+    connection: &Connection,
+    column: &str,
+    enabled: bool,
+) -> AppResult<bool> {
+    let allowed = ["always_on_top", "reminders_paused"];
+    if !allowed.contains(&column) {
+        return Err(AppError::InvalidData("setting is not mutable".into()));
+    }
     connection.execute(
         &format!("UPDATE settings SET {column} = ?1, updated_at = ?2 WHERE id = 1"),
         params![enabled as i64, Utc::now().to_rfc3339()],
@@ -638,8 +691,9 @@ pub fn read_settings(connection: &Connection) -> AppResult<AppSettings> {
     Ok(connection.query_row(
         "SELECT reminder_interval_minutes, daily_quota, quiet_hours_enabled, quiet_start, quiet_end,
                 autostart, always_on_top, language_pack_id, reminders_paused, quiet_mode_until,
-                speech_enabled, pet_appearance_id
-         FROM settings WHERE id = 1",
+                speech_enabled, pet_appearance_id,
+                updated_at
+          FROM settings WHERE id = 1",
         [],
         |row| {
             Ok(AppSettings {
@@ -655,6 +709,7 @@ pub fn read_settings(connection: &Connection) -> AppResult<AppSettings> {
                 quiet_mode_until: row.get(9)?,
                 speech_enabled: row.get::<_, i64>(10)? != 0,
                 pet_appearance_id: row.get(11)?,
+                updated_at: row.get(12)?,
             })
         },
     )?)
@@ -886,6 +941,52 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(card.tier, LevelBand::T3);
+    }
+
+    #[test]
+    fn invalid_settings_are_rejected_before_any_settings_write() {
+        let (_directory, state) = test_state();
+        let connection = state.connect().unwrap();
+        let previous = read_settings(&connection).unwrap();
+        let mut invalid = previous.clone();
+        invalid.reminder_interval_minutes = 0;
+
+        assert!(validate_settings_with_connection(&connection, &invalid).is_err());
+        assert_eq!(read_settings(&connection).unwrap(), previous);
+    }
+
+    #[test]
+    fn settings_and_active_pack_are_saved_together() {
+        let (_directory, state) = test_state();
+        let connection = state.connect().unwrap();
+        let mut next = read_settings(&connection).unwrap();
+        next.daily_quota = 42;
+        next.speech_enabled = true;
+
+        let saved = update_settings_with_connection(&connection, &next).unwrap();
+        assert_eq!(saved.daily_quota, 42);
+        assert!(saved.speech_enabled);
+        let active_pack: String = connection
+            .query_row(
+                "SELECT active_pack_id FROM learner_profile WHERE id = 1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(active_pack, saved.language_pack_id);
+    }
+
+    #[test]
+    fn stale_settings_version_is_rejected_without_a_write() {
+        let (_directory, state) = test_state();
+        let connection = state.connect().unwrap();
+        let previous = read_settings(&connection).unwrap();
+        let mut stale = previous.clone();
+        stale.updated_at = Some("stale-version".into());
+        stale.daily_quota = previous.daily_quota + 1;
+
+        assert!(validate_settings_version(&previous, &stale).is_err());
+        assert_eq!(read_settings(&connection).unwrap(), previous);
     }
 
     #[test]

@@ -89,14 +89,6 @@ impl DbState {
         &self.path
     }
 
-    #[cfg(test)]
-    pub fn for_test(path: PathBuf) -> Self {
-        Self {
-            path,
-            write_lock: Mutex::new(()),
-        }
-    }
-
     pub fn connect(&self) -> AppResult<Connection> {
         open_connection(&self.path)
     }

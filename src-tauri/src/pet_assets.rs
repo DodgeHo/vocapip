@@ -64,36 +64,72 @@ pub fn import_pet_image(
     let state_name = asset_state.as_str();
     let now = Utc::now().to_rfc3339();
     let id = format!("pet-custom-{state_name}-{}", Uuid::new_v4());
-    let connection = state.connect()?;
-    connection.execute(
+    let _guard = state
+        .write_lock
+        .lock()
+        .map_err(|_| AppError::Resource("database write lock is poisoned".into()))?;
+    let mut connection = state.connect()?;
+    let transaction = connection.transaction()?;
+    transaction.execute(
         "INSERT INTO pet_assets (id, appearance_id, state, mime_type, width, height, bytes, created_at, updated_at)
          VALUES (?1, 'custom', ?2, ?3, ?4, ?5, ?6, ?7, ?7)
          ON CONFLICT(appearance_id, state) DO UPDATE SET id = excluded.id, mime_type = excluded.mime_type,
            width = excluded.width, height = excluded.height, bytes = excluded.bytes, updated_at = excluded.updated_at",
         params![id, state_name, mime_type, width, height, bytes, now],
     )?;
-    read_pet_asset(&connection, asset_state)?
-        .ok_or_else(|| AppError::Resource("saved pet image could not be read".into()))
+    if asset_state == PetAssetState::Default {
+        transaction.execute(
+            "UPDATE settings SET pet_appearance_id = 'custom', updated_at = ?1 WHERE id = 1",
+            [Utc::now().to_rfc3339()],
+        )?;
+    }
+    let saved = read_pet_asset(&transaction, asset_state)?
+        .ok_or_else(|| AppError::Resource("saved pet image could not be read".into()))?;
+    transaction.commit()?;
+    Ok(saved)
 }
 
-pub fn remove_pet_image(state: &DbState, asset_state: PetAssetState) -> AppResult<()> {
-    let connection = state.connect()?;
-    connection.execute(
+pub fn remove_pet_image(state: &DbState, asset_state: PetAssetState) -> AppResult<String> {
+    let _guard = state
+        .write_lock
+        .lock()
+        .map_err(|_| AppError::Resource("database write lock is poisoned".into()))?;
+    let mut connection = state.connect()?;
+    let transaction = connection.transaction()?;
+    transaction.execute(
         "DELETE FROM pet_assets WHERE appearance_id = 'custom' AND state = ?1",
         [asset_state.as_str()],
     )?;
-    let selected: String = connection.query_row(
+    let mut selected: String = transaction.query_row(
         "SELECT pet_appearance_id FROM settings WHERE id = 1",
         [],
         |row| row.get(0),
     )?;
-    if selected == "custom" && read_pet_asset(&connection, PetAssetState::Default)?.is_none() {
-        connection.execute(
+    if selected == "custom" && read_pet_asset(&transaction, PetAssetState::Default)?.is_none() {
+        transaction.execute(
             "UPDATE settings SET pet_appearance_id = 'mint', updated_at = ?1 WHERE id = 1",
             [Utc::now().to_rfc3339()],
         )?;
+        selected = "mint".into();
     }
-    Ok(())
+    transaction.commit()?;
+    Ok(selected)
+}
+
+pub fn clear_pet_images(state: &DbState) -> AppResult<String> {
+    let _guard = state
+        .write_lock
+        .lock()
+        .map_err(|_| AppError::Resource("database write lock is poisoned".into()))?;
+    let mut connection = state.connect()?;
+    let transaction = connection.transaction()?;
+    transaction.execute("DELETE FROM pet_assets WHERE appearance_id = 'custom'", [])?;
+    transaction.execute(
+        "UPDATE settings SET pet_appearance_id = 'mint', updated_at = ?1 WHERE id = 1",
+        [Utc::now().to_rfc3339()],
+    )?;
+    transaction.commit()?;
+    Ok("mint".into())
 }
 
 pub fn get_pet_asset(state: &DbState, asset_state: PetAssetState) -> AppResult<Option<PetAsset>> {
@@ -105,6 +141,10 @@ pub fn set_pet_appearance(state: &DbState, appearance_id: &str) -> AppResult<Str
     if !SYSTEM_APPEARANCES.contains(&appearance_id) && appearance_id != "custom" {
         return Err(AppError::InvalidData("unknown pet appearance".into()));
     }
+    let _guard = state
+        .write_lock
+        .lock()
+        .map_err(|_| AppError::Resource("database write lock is poisoned".into()))?;
     let connection = state.connect()?;
     if appearance_id == "custom" && read_pet_asset(&connection, PetAssetState::Default)?.is_none() {
         return Err(AppError::InvalidData(
@@ -216,16 +256,79 @@ mod tests {
     fn saves_reads_and_removes_custom_asset() {
         let dir = tempfile::tempdir().unwrap();
         let state = DbState::initialize(dir.path().join("test.sqlite3")).unwrap();
-        let saved = import_pet_image(&state, PetAssetState::Default, &data_url()).unwrap();
-        assert_eq!(saved.state, PetAssetState::Default);
         let saved = import_pet_image(&state, PetAssetState::Idle, &data_url()).unwrap();
         assert_eq!(saved.mime_type, "image/png");
         assert!(get_pet_asset(&state, PetAssetState::Idle)
             .unwrap()
             .is_some());
+        assert!(set_pet_appearance(&state, "custom").is_err());
+        let saved = import_pet_image(&state, PetAssetState::Default, &data_url()).unwrap();
+        assert_eq!(saved.state, PetAssetState::Default);
+        assert_eq!(set_pet_appearance(&state, "custom").unwrap(), "custom");
         remove_pet_image(&state, PetAssetState::Idle).unwrap();
         assert!(get_pet_asset(&state, PetAssetState::Idle)
             .unwrap()
             .is_none());
+    }
+
+    #[test]
+    fn failed_asset_delete_rolls_back_asset_and_appearance_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = DbState::initialize(dir.path().join("test.sqlite3")).unwrap();
+        import_pet_image(&state, PetAssetState::Default, &data_url()).unwrap();
+        import_pet_image(&state, PetAssetState::Idle, &data_url()).unwrap();
+        set_pet_appearance(&state, "custom").unwrap();
+        state
+            .connect()
+            .unwrap()
+            .execute_batch(
+                "CREATE TRIGGER reject_pet_asset_delete
+                 BEFORE DELETE ON pet_assets
+                 BEGIN SELECT RAISE(ABORT, 'delete blocked'); END;",
+            )
+            .unwrap();
+
+        assert!(remove_pet_image(&state, PetAssetState::Default).is_err());
+        assert!(get_pet_asset(&state, PetAssetState::Default)
+            .unwrap()
+            .is_some());
+        assert_eq!(
+            crate::repository::read_settings(&state.connect().unwrap())
+                .unwrap()
+                .pet_appearance_id,
+            "custom"
+        );
+    }
+
+    #[test]
+    fn failed_clear_rolls_back_all_assets() {
+        let dir = tempfile::tempdir().unwrap();
+        let state = DbState::initialize(dir.path().join("test.sqlite3")).unwrap();
+        import_pet_image(&state, PetAssetState::Default, &data_url()).unwrap();
+        import_pet_image(&state, PetAssetState::Correct, &data_url()).unwrap();
+        set_pet_appearance(&state, "custom").unwrap();
+        state
+            .connect()
+            .unwrap()
+            .execute_batch(
+                "CREATE TRIGGER reject_pet_asset_clear
+                 BEFORE DELETE ON pet_assets
+                 BEGIN SELECT RAISE(ABORT, 'clear blocked'); END;",
+            )
+            .unwrap();
+
+        assert!(clear_pet_images(&state).is_err());
+        assert!(get_pet_asset(&state, PetAssetState::Default)
+            .unwrap()
+            .is_some());
+        assert!(get_pet_asset(&state, PetAssetState::Correct)
+            .unwrap()
+            .is_some());
+        assert_eq!(
+            crate::repository::read_settings(&state.connect().unwrap())
+                .unwrap()
+                .pet_appearance_id,
+            "custom"
+        );
     }
 }

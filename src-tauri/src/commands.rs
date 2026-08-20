@@ -1,7 +1,8 @@
 use crate::app::{
-    hide_main_window, open_or_focus_window, set_main_always_on_top, set_main_surface_mode,
-    show_pet_context_menu as show_native_pet_context_menu, PetSurfaceMode, PetSurfaceResult,
-    MAIN_WINDOW,
+    hide_main_window, open_or_focus_window, restore_native_settings, set_main_surface_mode,
+    show_pet_context_menu as show_native_pet_context_menu, synchronize_native_settings,
+    PetSurfaceMode, PetSurfaceResult, BACKUP_IMPORTED_EVENT, MAIN_WINDOW,
+    PET_APPEARANCE_CHANGED_EVENT, PET_ASSETS_CHANGED_EVENT, SETTINGS_CHANGED_EVENT,
 };
 use crate::backup;
 use crate::db::DbState;
@@ -11,7 +12,6 @@ use crate::pet_assets;
 use crate::repository;
 use crate::speech;
 use tauri::{AppHandle, Emitter, State};
-use tauri_plugin_autostart::ManagerExt;
 use tauri_plugin_dialog::DialogExt;
 
 #[tauri::command]
@@ -62,17 +62,40 @@ pub fn update_settings(
     state: State<'_, DbState>,
     settings: AppSettings,
 ) -> Result<AppSettings, String> {
-    let autostart = app.autolaunch();
-    let autostart_result = if settings.autostart {
-        autostart.enable()
-    } else {
-        autostart.disable()
+    let _guard = state
+        .write_lock
+        .lock()
+        .map_err(|_| "保存设置失败：数据库写锁不可用".to_string())?;
+    let connection = state
+        .connect()
+        .map_err(|error| format!("保存设置失败：读取当前设置失败：{error}"))?;
+    let previous = repository::read_settings(&connection)
+        .map_err(|error| format!("保存设置失败：读取当前设置失败：{error}"))?;
+    repository::validate_settings_with_connection(&connection, &settings)
+        .map_err(|error| format!("保存设置失败：设置校验失败：{error}"))?;
+    repository::validate_settings_version(&previous, &settings)
+        .map_err(|error| format!("保存设置失败：并发冲突：{error}"))?;
+    synchronize_native_settings(&app, &previous, &settings)
+        .map_err(|error| format!("保存设置失败：原生操作失败：{error}"))?;
+    let saved = match repository::update_settings_with_connection(&connection, &settings) {
+        Ok(saved) => saved,
+        Err(error) => {
+            let compensation = restore_native_settings(&app, &previous, &settings).err();
+            return Err(match compensation {
+                Some(compensation) => format!(
+                    "保存设置失败：数据库写入失败：{error}；原生状态补偿失败：{compensation}"
+                ),
+                None => format!("保存设置失败：数据库写入失败：{error}"),
+            });
+        }
     };
-    autostart_result
-        .map_err(|error| AppError::Resource(format!("unable to update autostart: {error}")))
-        .command()?;
-    set_main_always_on_top(&app, settings.always_on_top).command()?;
-    repository::update_settings(&state, &settings).command()
+    app.emit(SETTINGS_CHANGED_EVENT, &saved)
+        .map_err(|error| format!("设置已保存，但通知其他窗口失败：{error}"))?;
+    if previous.pet_appearance_id != saved.pet_appearance_id {
+        app.emit(PET_APPEARANCE_CHANGED_EVENT, &saved.pet_appearance_id)
+            .map_err(|error| format!("设置已保存，但通知宠物外观失败：{error}"))?;
+    }
+    Ok(saved)
 }
 
 #[tauri::command]
@@ -121,7 +144,45 @@ pub async fn import_data(
         .into_path()
         .map_err(|_| AppError::InvalidData("backup source is not a local file path".into()))
         .command()?;
-    backup::import_data(&state, &path).map(Some).command()
+    let _guard = state
+        .write_lock
+        .lock()
+        .map_err(|_| "导入数据失败：数据库写锁不可用".to_string())?;
+    let mut connection = state
+        .connect()
+        .map_err(|error| format!("导入数据失败：打开数据库失败：{error}"))?;
+    let previous = repository::read_settings(&connection)
+        .map_err(|error| format!("导入数据失败：读取当前设置失败：{error}"))?;
+    let transaction = backup::import_document_transaction(&mut connection, &path)
+        .map_err(|error| format!("导入数据失败：读取或校验备份失败：{error}"))?;
+    let imported = repository::read_settings(&transaction)
+        .map_err(|error| format!("导入数据失败：读取导入设置失败：{error}"))?;
+    if let Err(error) = synchronize_native_settings(&app, &previous, &imported) {
+        return Err(format!("导入数据失败：原生状态同步失败：{error}"));
+    }
+    if let Err(error) = transaction.commit() {
+        let compensation = restore_native_settings(&app, &previous, &imported).err();
+        return Err(match compensation {
+            Some(compensation) => {
+                format!("导入数据失败：数据库提交失败：{error}；原生状态补偿失败：{compensation}")
+            }
+            None => format!("导入数据失败：数据库提交失败：{error}"),
+        });
+    }
+    let bootstrap = repository::bootstrap_with_connection(&connection)
+        .map_err(|error| format!("导入数据失败：重新加载数据失败：{error}"))?;
+    app.emit(BACKUP_IMPORTED_EVENT, &bootstrap)
+        .map_err(|error| format!("备份已导入，但通知其他窗口失败：{error}"))?;
+    app.emit(SETTINGS_CHANGED_EVENT, &bootstrap.settings)
+        .map_err(|error| format!("备份已导入，但通知设置窗口失败：{error}"))?;
+    app.emit(PET_ASSETS_CHANGED_EVENT, serde_json::json!({}))
+        .map_err(|error| format!("备份已导入，但通知图片窗口失败：{error}"))?;
+    app.emit(
+        PET_APPEARANCE_CHANGED_EVENT,
+        &bootstrap.settings.pet_appearance_id,
+    )
+    .map_err(|error| format!("备份已导入，但通知宠物外观失败：{error}"))?;
+    Ok(Some(bootstrap))
 }
 
 #[tauri::command]
@@ -153,12 +214,16 @@ pub fn set_always_on_top(
     state: State<'_, DbState>,
     enabled: bool,
 ) -> Result<bool, String> {
-    set_main_always_on_top(&app, enabled).command()?;
-    let persisted = repository::set_boolean_setting(&state, "always_on_top", enabled).command()?;
+    let persisted = crate::app::persist_always_on_top(&app, &state, enabled).command()?;
     app.emit_to(
         MAIN_WINDOW,
         "vocapip://pet-action",
         serde_json::json!({ "action": "always-on-top", "enabled": persisted }),
+    )
+    .map_err(|error| error.to_string())?;
+    app.emit(
+        SETTINGS_CHANGED_EVENT,
+        serde_json::json!({ "alwaysOnTop": persisted }),
     )
     .map_err(|error| error.to_string())?;
     Ok(persisted)
@@ -178,15 +243,29 @@ pub fn set_reminders_paused(
         serde_json::json!({ "action": "reminders-paused", "paused": persisted }),
     )
     .map_err(|error| error.to_string())?;
+    app.emit(
+        SETTINGS_CHANGED_EVENT,
+        serde_json::json!({ "remindersPaused": persisted }),
+    )
+    .map_err(|error| error.to_string())?;
     Ok(persisted)
 }
 
 #[tauri::command]
 pub fn set_quiet_mode_until(
+    app: AppHandle,
     state: State<'_, DbState>,
     until: Option<String>,
 ) -> Result<Option<String>, String> {
-    repository::set_quiet_until(&state, until.as_deref()).command()
+    let persisted = repository::set_quiet_until(&state, until.as_deref()).command()?;
+    app.emit(
+        SETTINGS_CHANGED_EVENT,
+        serde_json::json!({
+            "quietModeUntil": persisted,
+        }),
+    )
+    .map_err(|error| error.to_string())?;
+    Ok(persisted)
 }
 
 #[tauri::command]
@@ -229,19 +308,52 @@ pub fn list_pet_appearances(
 
 #[tauri::command(rename_all = "camelCase")]
 pub fn import_pet_image(
+    app: AppHandle,
     state: State<'_, DbState>,
     asset_state: PetAssetState,
     data_url: String,
 ) -> Result<PetAsset, String> {
-    pet_assets::import_pet_image(&state, asset_state, &data_url).command()
+    let saved = pet_assets::import_pet_image(&state, asset_state, &data_url).command()?;
+    app.emit(
+        PET_ASSETS_CHANGED_EVENT,
+        serde_json::json!({ "state": asset_state }),
+    )
+    .map_err(|error| error.to_string())?;
+    if asset_state == PetAssetState::Default {
+        app.emit(PET_APPEARANCE_CHANGED_EVENT, "custom")
+            .map_err(|error| error.to_string())?;
+    }
+    Ok(saved)
 }
 
 #[tauri::command(rename_all = "camelCase")]
 pub fn remove_pet_image(
+    app: AppHandle,
     state: State<'_, DbState>,
     asset_state: PetAssetState,
-) -> Result<(), String> {
-    pet_assets::remove_pet_image(&state, asset_state).command()
+) -> Result<String, String> {
+    let appearance = pet_assets::remove_pet_image(&state, asset_state).command()?;
+    app.emit(
+        PET_ASSETS_CHANGED_EVENT,
+        serde_json::json!({ "state": asset_state }),
+    )
+    .map_err(|error| error.to_string())?;
+    app.emit(PET_APPEARANCE_CHANGED_EVENT, &appearance)
+        .map_err(|error| error.to_string())?;
+    Ok(appearance)
+}
+
+#[tauri::command]
+pub fn clear_pet_images(app: AppHandle, state: State<'_, DbState>) -> Result<String, String> {
+    let appearance = pet_assets::clear_pet_images(&state).command()?;
+    app.emit(
+        PET_ASSETS_CHANGED_EVENT,
+        serde_json::json!({ "cleared": true }),
+    )
+    .map_err(|error| error.to_string())?;
+    app.emit(PET_APPEARANCE_CHANGED_EVENT, &appearance)
+        .map_err(|error| error.to_string())?;
+    Ok(appearance)
 }
 
 #[tauri::command(rename_all = "camelCase")]
@@ -254,8 +366,12 @@ pub fn get_pet_asset(
 
 #[tauri::command(rename_all = "camelCase")]
 pub fn set_pet_appearance(
+    app: AppHandle,
     state: State<'_, DbState>,
     appearance_id: String,
 ) -> Result<String, String> {
-    pet_assets::set_pet_appearance(&state, &appearance_id).command()
+    let appearance = pet_assets::set_pet_appearance(&state, &appearance_id).command()?;
+    app.emit(PET_APPEARANCE_CHANGED_EVENT, &appearance)
+        .map_err(|error| error.to_string())?;
+    Ok(appearance)
 }

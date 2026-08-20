@@ -1,5 +1,6 @@
 import { Search, Star, X } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AppShell } from "../components/AppShell";
 import { zhCN } from "../i18n/zh-CN";
 import { api } from "../lib/api";
@@ -36,35 +37,75 @@ export function LibraryView() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [notice, setNotice] = useState("");
   const [error, setError] = useState("");
+  const mounted = useRef(false);
+  const loadSequence = useRef(0);
+  const noticeTimer = useRef<number | undefined>(undefined);
 
   const load = useCallback(async () => {
+    if (!mounted.current) return;
+    const request = ++loadSequence.current;
     setLoading(true);
     try {
       const next = await api.listLibrary({ ...query, offset: 0 });
+      if (!mounted.current || request !== loadSequence.current) return;
       setPayload(next);
       setError("");
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : zhCN.common.unknownError,
-      );
+      if (mounted.current && request === loadSequence.current)
+        setError(
+          cause instanceof Error ? cause.message : zhCN.common.unknownError,
+        );
     } finally {
-      setLoading(false);
+      if (mounted.current && request === loadSequence.current)
+        setLoading(false);
     }
   }, [query]);
 
   useEffect(() => {
+    mounted.current = true;
     const timer = window.setTimeout(() => void load(), 180);
-    return () => window.clearTimeout(timer);
+    return () => {
+      window.clearTimeout(timer);
+      mounted.current = false;
+      loadSequence.current += 1;
+      if (noticeTimer.current !== undefined)
+        window.clearTimeout(noticeTimer.current);
+    };
+  }, [load]);
+
+  useEffect(() => {
+    if (!("__TAURI_INTERNALS__" in window)) return;
+    let cancelled = false;
+    let dispose: (() => void) | undefined;
+    void listen("vocapip://backup-imported", () => void load())
+      .then((nextDispose) => {
+        if (cancelled) nextDispose();
+        else dispose = nextDispose;
+      })
+      .catch((cause: unknown) => {
+        if (!cancelled && mounted.current)
+          setError(
+            cause instanceof Error
+              ? `${zhCN.library.eventSyncError}：${cause.message}`
+              : zhCN.library.eventSyncError,
+          );
+      });
+    return () => {
+      cancelled = true;
+      dispose?.();
+    };
   }, [load]);
 
   const loadMore = async () => {
     if (!payload?.hasMore || loadingMore) return;
+    const request = loadSequence.current;
     setLoadingMore(true);
     try {
       const next = await api.listLibrary({
         ...query,
         offset: payload.items.length,
       });
+      if (!mounted.current || request !== loadSequence.current) return;
       setPayload((current) =>
         current
           ? {
@@ -75,15 +116,18 @@ export function LibraryView() {
       );
       setError("");
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : zhCN.common.unknownError,
-      );
+      if (mounted.current && request === loadSequence.current)
+        setError(
+          cause instanceof Error ? cause.message : zhCN.common.unknownError,
+        );
     } finally {
-      setLoadingMore(false);
+      if (mounted.current && request === loadSequence.current)
+        setLoadingMore(false);
     }
   };
 
   const replace = (updated: LearningCard) =>
+    mounted.current &&
     setPayload((current) =>
       current
         ? {
@@ -98,8 +142,13 @@ export function LibraryView() {
   const toggleFavorite = async (card: LearningCard) => {
     try {
       replace(await api.toggleFavorite(card.id));
-    } catch {
-      setError(zhCN.common.unknownError);
+    } catch (cause) {
+      if (mounted.current)
+        setError(
+          cause instanceof Error
+            ? `${zhCN.library.favoriteError}：${cause.message}`
+            : zhCN.library.favoriteError,
+        );
     }
   };
 
@@ -107,9 +156,18 @@ export function LibraryView() {
     try {
       replace(await api.queueRelearn(card.id));
       setNotice(card.word + " · " + zhCN.library.queued);
-      window.setTimeout(() => setNotice(""), 1800);
-    } catch {
-      setError(zhCN.common.unknownError);
+      if (noticeTimer.current !== undefined)
+        window.clearTimeout(noticeTimer.current);
+      noticeTimer.current = window.setTimeout(() => {
+        if (mounted.current) setNotice("");
+      }, 1800);
+    } catch (cause) {
+      if (mounted.current)
+        setError(
+          cause instanceof Error
+            ? `${zhCN.library.relearnError}：${cause.message}`
+            : zhCN.library.relearnError,
+        );
     }
   };
 

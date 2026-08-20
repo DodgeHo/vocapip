@@ -55,7 +55,36 @@ describe("frontend data contracts", () => {
       dataUrl,
     });
 
-    await api.removePetImage("default");
+    await expect(api.removePetImage("default")).resolves.toBe("mint");
     await expect(api.getPetAsset("default")).resolves.toBeNull();
+  });
+
+  it("automatically selects custom only after the default image is uploaded", async () => {
+    const dataUrl = "data:image/png;base64,AA==";
+    await api.importPetImage("idle", dataUrl);
+    await expect(api.bootstrap()).resolves.toMatchObject({
+      settings: { petAppearanceId: "mint" },
+    });
+    await api.importPetImage("default", dataUrl);
+    await expect(api.bootstrap()).resolves.toMatchObject({
+      settings: { petAppearanceId: "custom" },
+    });
+  });
+
+  it("clears all custom images in one operation and restores Mint", async () => {
+    const dataUrl = "data:image/png;base64,AA==";
+    await api.importPetImage("default", dataUrl);
+    await api.importPetImage("correct", dataUrl);
+    await expect(api.clearPetImages()).resolves.toBe("mint");
+    await expect(api.getPetAssets()).resolves.toEqual({});
+    await expect(api.bootstrap()).resolves.toMatchObject({
+      settings: { petAppearanceId: "mint" },
+    });
+  });
+
+  it("rejects custom appearance without a default image", async () => {
+    await expect(api.setPetAppearance("custom")).rejects.toThrow(
+      "custom pet appearance requires a default image",
+    );
   });
 });

@@ -1527,6 +1527,12 @@ h3 {
 .save-settings {
   min-width: 116px;
 }
+.settings-save-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 3px;
+}
 .settings-layout {
   max-width: 900px;
   margin: 0 auto;

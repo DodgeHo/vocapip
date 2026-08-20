@@ -1,6 +1,6 @@
 import { listen } from "@tauri-apps/api/event";
 import { EyeOff, Pin, PinOff, Volume2, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Placement } from "../components/Placement";
 import { PetCharacter } from "../components/PetCharacter";
 import { ProgressStrip } from "../components/ProgressStrip";
@@ -46,26 +46,43 @@ export function PetView() {
   const [xpFeedback, setXpFeedback] = useState(0);
   const [leveledUp, setLeveledUp] = useState(false);
   const [error, setError] = useState("");
+  const [pinBusy, setPinBusy] = useState(false);
+  const mounted = useRef(false);
+  const loadSequence = useRef(0);
+  const pinRequest = useRef(0);
+  const moodTimer = useRef<number | undefined>(undefined);
+  const feedbackTimer = useRef<number | undefined>(undefined);
 
   const load = async () => {
+    if (!mounted.current) return;
+    const request = ++loadSequence.current;
     try {
-      const [next, assets] = await Promise.all([
-        api.bootstrap(),
-        api.getPetAssets(),
-      ]);
+      const next = await api.bootstrap();
+      const assets = await api.getPetAssets();
+      if (!mounted.current || request !== loadSequence.current) return;
       setData(next);
       setCard(next.currentCard ?? null);
       setCustomAssets(assets);
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : zhCN.common.unknownError,
-      );
-      setMood("error");
+      if (mounted.current) {
+        setError(
+          cause instanceof Error ? cause.message : zhCN.common.unknownError,
+        );
+        setMood("error");
+      }
     }
   };
 
   useEffect(() => {
+    mounted.current = true;
     void load();
+    return () => {
+      mounted.current = false;
+      if (moodTimer.current !== undefined)
+        window.clearTimeout(moodTimer.current);
+      if (feedbackTimer.current !== undefined)
+        window.clearTimeout(feedbackTimer.current);
+    };
   }, []);
 
   const surfaceMode: PetSurfaceMode = !data?.placementComplete
@@ -98,10 +115,14 @@ export function PetView() {
   }, [data, surfaceMode]);
 
   const openLearning = () => {
+    if (!mounted.current) return;
     setProgressOpen(false);
     setMood("click");
     setBubbleOpen(true);
-    window.setTimeout(() => setMood("idle"), 420);
+    if (moodTimer.current !== undefined) window.clearTimeout(moodTimer.current);
+    moodTimer.current = window.setTimeout(() => {
+      if (mounted.current) setMood("idle");
+    }, 420);
   };
 
   useEffect(() => {
@@ -122,8 +143,13 @@ export function PetView() {
     const disposers: Array<() => void> = [];
     let cancelled = false;
 
-    void Promise.all([
+    const refresh = () => void load();
+    void Promise.allSettled([
       listen("vocapip://reminder-due", openLearning),
+      listen("vocapip://settings-changed", refresh),
+      listen("vocapip://pet-assets-changed", refresh),
+      listen("vocapip://pet-appearance-changed", refresh),
+      listen("vocapip://backup-imported", refresh),
       listen<PetActionPayload>("vocapip://pet-action", (event) => {
         const action = getPetAction(event.payload);
         if (action === "learn" || action === "study") {
@@ -166,9 +192,20 @@ export function PetView() {
           }
         }
       }),
-    ]).then((nextDisposers) => {
-      if (cancelled) nextDisposers.forEach((dispose) => dispose());
-      else disposers.push(...nextDisposers);
+    ]).then((results) => {
+      const failed = results.find((result) => result.status === "rejected");
+      results.forEach((result) => {
+        if (result.status === "fulfilled") {
+          if (cancelled) result.value();
+          else disposers.push(result.value);
+        }
+      });
+      if (failed && mounted.current)
+        setError(
+          failed.reason instanceof Error
+            ? `${zhCN.pet.eventSyncError}：${failed.reason.message}`
+            : zhCN.pet.eventSyncError,
+        );
     });
 
     return () => {
@@ -183,36 +220,59 @@ export function PetView() {
   );
 
   const completePlacement = async (submission: PlacementSubmission) => {
-    const next = await api.completePlacement(submission);
-    setData(next);
-    setCard(next.currentCard ?? null);
+    try {
+      const next = await api.completePlacement(submission);
+      if (!mounted.current) return;
+      setData(next);
+      setCard(next.currentCard ?? null);
+    } catch (cause) {
+      if (mounted.current) {
+        setError(
+          cause instanceof Error ? cause.message : zhCN.common.unknownError,
+        );
+        setMood("error");
+      }
+    }
   };
 
   const hidePet = async () => {
     try {
       await api.hidePet();
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : zhCN.common.unknownError,
-      );
-      setMood("error");
+      if (mounted.current) {
+        setError(
+          cause instanceof Error ? cause.message : zhCN.common.unknownError,
+        );
+        setMood("error");
+      }
     }
   };
 
   const toggleAlwaysOnTop = async () => {
-    if (!data) return;
+    if (!data || pinBusy) return;
+    const request = ++pinRequest.current;
     const enabled = !data.settings.alwaysOnTop;
+    setPinBusy(true);
     try {
       const applied = await api.setAlwaysOnTop(enabled);
-      setData({
-        ...data,
-        settings: { ...data.settings, alwaysOnTop: applied },
-      });
+      if (mounted.current && request === pinRequest.current)
+        setData((current) =>
+          current
+            ? {
+                ...current,
+                settings: { ...current.settings, alwaysOnTop: applied },
+              }
+            : current,
+        );
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : zhCN.common.unknownError,
-      );
-      setMood("error");
+      if (mounted.current && request === pinRequest.current) {
+        setError(
+          cause instanceof Error ? cause.message : zhCN.common.unknownError,
+        );
+        setMood("error");
+      }
+    } finally {
+      if (mounted.current && request === pinRequest.current) setPinBusy(false);
     }
   };
 
@@ -239,12 +299,17 @@ export function PetView() {
         now.toISOString(),
         nextFsrs,
       );
-      setData({
-        ...data,
-        progress: outcome.progress,
-        daily: outcome.daily,
-        currentCard: outcome.nextCard,
-      });
+      if (!mounted.current) return;
+      setData((current) =>
+        current
+          ? {
+              ...current,
+              progress: outcome.progress,
+              daily: outcome.daily,
+              currentCard: outcome.nextCard,
+            }
+          : current,
+      );
       setFeedback(
         outcome.leveledUp
           ? zhCN.pet.feedback.upgrade
@@ -260,7 +325,10 @@ export function PetView() {
             : "correct",
       );
       setRevealed(false);
-      window.setTimeout(() => {
+      if (feedbackTimer.current !== undefined)
+        window.clearTimeout(feedbackTimer.current);
+      feedbackTimer.current = window.setTimeout(() => {
+        if (!mounted.current) return;
         setCard(outcome.nextCard ?? null);
         setFeedback("");
         setXpFeedback(0);
@@ -269,12 +337,14 @@ export function PetView() {
         if (!outcome.nextCard) setBubbleOpen(false);
       }, 1050);
     } catch (cause) {
-      setError(
-        cause instanceof Error ? cause.message : zhCN.common.unknownError,
-      );
-      setMood("error");
+      if (mounted.current) {
+        setError(
+          cause instanceof Error ? cause.message : zhCN.common.unknownError,
+        );
+        setMood("error");
+      }
     } finally {
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
   };
 
@@ -304,6 +374,7 @@ export function PetView() {
                     : zhCN.pet.pinPet
                 }
                 aria-pressed={data.settings.alwaysOnTop}
+                disabled={pinBusy}
                 onClick={() => void toggleAlwaysOnTop()}
               >
                 {data.settings.alwaysOnTop ? (

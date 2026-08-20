@@ -242,6 +242,8 @@ describe("library and settings", () => {
 
   it("keeps speech and appearance settings in the editable settings model", async () => {
     const user = userEvent.setup();
+    const setAlwaysOnTop = vi.spyOn(api, "setAlwaysOnTop");
+    const updateSettings = vi.spyOn(api, "updateSettings");
     render(<SettingsView />);
     await screen.findByRole("heading", { name: "学习节奏" });
 
@@ -253,12 +255,75 @@ describe("library and settings", () => {
     const coral = screen.getByRole("radio", { name: "Coral" });
     await user.click(coral);
     expect(coral.getAttribute("aria-checked")).toBe("true");
-    await user.click(screen.getByRole("button", { name: "已立即应用" }));
+    await user.click(screen.getByRole("button", { name: "保存设置" }));
     await screen.findByText("已保存");
+    expect(updateSettings).toHaveBeenCalledTimes(1);
+    expect(setAlwaysOnTop).not.toHaveBeenCalled();
 
     const saved = await api.bootstrap();
     expect(saved.settings.speechEnabled).toBe(true);
     expect(saved.settings.petAppearanceId).toBe("coral");
+  });
+
+  it("disables shared settings controls while saving", async () => {
+    const user = userEvent.setup();
+    let resolveSave!: (
+      settings: Awaited<ReturnType<typeof api.bootstrap>>["settings"],
+    ) => void;
+    const updateSettings = vi.spyOn(api, "updateSettings").mockImplementation(
+      (settings) =>
+        new Promise((resolve) => {
+          resolveSave = () => resolve(settings);
+        }),
+    );
+    render(<SettingsView />);
+    await screen.findByRole("heading", { name: "学习节奏" });
+    await user.click(screen.getByRole("switch", { name: "开机启动" }));
+    await user.click(screen.getByRole("button", { name: "保存设置" }));
+
+    expect(
+      screen.getByRole("button", { name: "正在读取本地数据…" }),
+    ).toHaveProperty("disabled", true);
+    expect(screen.getByRole("switch", { name: "桌宠始终置顶" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+    resolveSave((await api.bootstrap()).settings);
+    await waitFor(() => expect(updateSettings).toHaveBeenCalledTimes(1));
+  });
+
+  it("keeps a custom image when its delete operation fails", async () => {
+    const user = userEvent.setup();
+    class MockImage {
+      naturalWidth = 256;
+      naturalHeight = 256;
+      onload?: () => void;
+
+      set src(_value: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    vi.stubGlobal("Image", MockImage);
+    render(<SettingsView />);
+    await screen.findByRole("heading", { name: "学习节奏" });
+    const file = new File(["pet"], "pet.png", { type: "image/png" });
+    await user.upload(screen.getByLabelText("上传通用图片"), file);
+    await screen.findByText("图片已保存在本机并启用");
+    const remove = vi
+      .spyOn(api, "removePetImage")
+      .mockRejectedValue(new Error("数据库删除失败"));
+
+    await user.click(screen.getByRole("button", { name: "删除图片：通用" }));
+    expect(remove).toHaveBeenCalledWith("default");
+    expect(
+      await screen.findByText("删除自定义图片失败：数据库删除失败"),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "删除图片：通用" })).toBeTruthy();
+    expect(
+      screen
+        .getByRole("radio", { name: "我的图片" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
   });
 
   it("uses the speech command when the word speaker is pressed", async () => {
@@ -299,6 +364,28 @@ describe("library and settings", () => {
     expect(stop).toHaveBeenCalled();
   });
 
+  it("serializes rapid always-on-top clicks in the pet window", async () => {
+    const user = userEvent.setup();
+    let resolvePin!: (enabled: boolean) => void;
+    const setAlwaysOnTop = vi.spyOn(api, "setAlwaysOnTop").mockImplementation(
+      (enabled) =>
+        new Promise((resolve) => {
+          resolvePin = () => resolve(enabled);
+        }),
+    );
+    await api.completePlacement({ selfReportedTier: "T2" });
+    render(<PetView />);
+    const pin = await screen.findByRole("button", {
+      name: "将桌宠设为始终置顶",
+    });
+    await user.click(pin);
+    await user.click(pin);
+    expect(setAlwaysOnTop).toHaveBeenCalledTimes(1);
+    expect(pin).toHaveProperty("disabled", true);
+    resolvePin(true);
+    await waitFor(() => expect(pin).toHaveProperty("disabled", false));
+  });
+
   it("uploads one custom image, selects it, and restores Mint after removal", async () => {
     const user = userEvent.setup();
     class MockImage {
@@ -332,8 +419,48 @@ describe("library and settings", () => {
     ).toBe("true");
   });
 
-  it("loads editable offline settings and applies topmost changes immediately", async () => {
+  it("saves non-default custom images before the general image", async () => {
     const user = userEvent.setup();
+    class MockImage {
+      naturalWidth = 256;
+      naturalHeight = 256;
+      onload?: () => void;
+
+      set src(_value: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    vi.stubGlobal("Image", MockImage);
+    render(<SettingsView />);
+    await screen.findByRole("heading", { name: "学习节奏" });
+
+    const file = new File(["pet"], "pet.png", { type: "image/png" });
+    await user.upload(screen.getByLabelText("上传待机图片"), file);
+
+    expect(
+      await screen.findByText("图片已保存，请先上传通用图片以启用"),
+    ).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("radio", { name: "我的图片" })).toHaveProperty(
+      "disabled",
+      true,
+    );
+
+    await user.upload(screen.getByLabelText("上传通用图片"), file);
+    expect(await screen.findByText("图片已保存在本机并启用")).toBeTruthy();
+    expect(
+      screen
+        .getByRole("radio", { name: "我的图片" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    await expect(api.getPetAsset("idle")).resolves.toMatchObject({
+      state: "idle",
+    });
+  });
+
+  it("saves topmost changes through the unified settings command", async () => {
+    const user = userEvent.setup();
+    const updateSettings = vi.spyOn(api, "updateSettings");
     render(<SettingsView />);
     expect(
       await screen.findByRole("heading", { name: "学习节奏" }),
@@ -347,8 +474,41 @@ describe("library and settings", () => {
     const topmost = screen.getByRole("switch", { name: "桌宠始终置顶" });
     expect(topmost.getAttribute("aria-checked")).toBe("false");
     await user.click(topmost);
-    expect(await screen.findByText("已立即应用")).toBeTruthy();
     expect(topmost.getAttribute("aria-checked")).toBe("true");
+    await user.click(screen.getByRole("button", { name: "保存设置" }));
+    await screen.findByText("已保存");
+    expect(updateSettings).toHaveBeenCalledWith(
+      expect.objectContaining({ alwaysOnTop: true }),
+    );
     expect(screen.getByText("纯离线")).toBeTruthy();
+  });
+
+  it("refreshes settings and assets after a successful backup import", async () => {
+    const user = userEvent.setup();
+    const imported = await api.bootstrap();
+    const bootstrap = vi.spyOn(api, "bootstrap").mockResolvedValue(imported);
+    const assets = vi.spyOn(api, "getPetAssets").mockResolvedValue({
+      default: "data:image/png;base64,restored",
+    });
+    const importData = vi.spyOn(api, "importData").mockResolvedValue(imported);
+    render(<SettingsView />);
+    await screen.findByRole("heading", { name: "学习节奏" });
+
+    await user.click(screen.getByRole("button", { name: "导入数据" }));
+    await screen.findByText("数据已导入，界面已刷新");
+    expect(importData).toHaveBeenCalledTimes(1);
+    expect(bootstrap).toHaveBeenCalledTimes(2);
+    expect(assets).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not show an import success message when the picker is cancelled", async () => {
+    const user = userEvent.setup();
+    const importData = vi.spyOn(api, "importData").mockResolvedValue(null);
+    render(<SettingsView />);
+    await screen.findByRole("heading", { name: "学习节奏" });
+
+    await user.click(screen.getByRole("button", { name: "导入数据" }));
+    await waitFor(() => expect(importData).toHaveBeenCalledTimes(1));
+    expect(screen.queryByText("数据已导入，界面已刷新")).toBeNull();
   });
 });

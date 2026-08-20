@@ -170,6 +170,8 @@ pub struct AppSettings {
     pub pet_appearance_id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub quiet_mode_until: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub updated_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]

@@ -1,6 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { disable, enable, isEnabled } from "@tauri-apps/plugin-autostart";
 import { z } from "zod";
 import { createFsrsCard } from "./fsrs";
 import type {
@@ -73,7 +72,11 @@ export interface CommandContract {
     args: { assetState: PetAssetState; dataUrl: string };
     result: PetAssetRecord;
   };
-  remove_pet_image: { args: { assetState: PetAssetState }; result: void };
+  remove_pet_image: {
+    args: { assetState: PetAssetState };
+    result: PetAppearanceId;
+  };
+  clear_pet_images: { args: undefined; result: PetAppearanceId };
   get_pet_asset: {
     args: { assetState: PetAssetState };
     result: PetAssetRecord | null;
@@ -165,6 +168,7 @@ const settingsSchema = z.object({
   speechEnabled: z.boolean().default(false),
   petAppearanceId: appearanceSchema.default("mint"),
   quietModeUntil: z.string().optional(),
+  updatedAt: z.string().optional(),
 });
 const bootstrapSchema = z.object({
   progress: z.object({
@@ -706,12 +710,6 @@ export const api = {
     if (isTauri()) return call("set_quiet_mode_until", { until });
     return until;
   },
-  async setAutostart(enabled: boolean): Promise<boolean> {
-    if (!isTauri()) return enabled;
-    if (enabled) await enable();
-    else await disable();
-    return isEnabled();
-  },
   async speakText(text: string): Promise<void> {
     const normalized = text.trim();
     if (!normalized) return;
@@ -741,11 +739,38 @@ export const api = {
         await call("import_pet_image", { assetState: state, dataUrl }),
       );
     localStorage.setItem(`${customPetImageStorageKey}:${state}`, dataUrl);
+    if (state === "default") {
+      const demo = loadDemo();
+      demo.bootstrap.settings.petAppearanceId = "custom";
+      storeDemo(demo);
+    }
     return { state, dataUrl };
   },
-  async removePetImage(state: PetAssetState): Promise<void> {
-    if (isTauri()) return call("remove_pet_image", { assetState: state });
+  async removePetImage(state: PetAssetState): Promise<PetAppearanceId> {
+    if (isTauri())
+      return appearanceSchema.parse(
+        await call("remove_pet_image", { assetState: state }),
+      );
     localStorage.removeItem(`${customPetImageStorageKey}:${state}`);
+    const demo = loadDemo();
+    if (
+      state === "default" &&
+      demo.bootstrap.settings.petAppearanceId === "custom"
+    ) {
+      demo.bootstrap.settings.petAppearanceId = defaultPetAppearance;
+      storeDemo(demo);
+    }
+    return demo.bootstrap.settings.petAppearanceId;
+  },
+  async clearPetImages(): Promise<PetAppearanceId> {
+    if (isTauri())
+      return appearanceSchema.parse(await call("clear_pet_images", undefined));
+    for (const state of petAssetStates)
+      localStorage.removeItem(`${customPetImageStorageKey}:${state}`);
+    const demo = loadDemo();
+    demo.bootstrap.settings.petAppearanceId = defaultPetAppearance;
+    storeDemo(demo);
+    return defaultPetAppearance;
   },
   async getPetAsset(state: PetAssetState): Promise<PetAssetRecord | null> {
     if (isTauri()) {
@@ -758,9 +783,11 @@ export const api = {
     return dataUrl ? { state, dataUrl } : null;
   },
   async getPetAssets(): Promise<CustomPetAssets> {
-    const assets = await Promise.all(
-      petAssetStates.map((state) => api.getPetAsset(state)),
-    );
+    const assets: PetAssetRecord[] = [];
+    for (const state of petAssetStates) {
+      const asset = await api.getPetAsset(state);
+      if (asset) assets.push(asset);
+    }
     return Object.fromEntries(
       assets
         .filter((asset): asset is PetAssetRecord => asset !== null)
@@ -774,6 +801,12 @@ export const api = {
       return appearanceSchema.parse(
         await call("set_pet_appearance", { appearanceId }),
       );
+    if (
+      appearanceId === "custom" &&
+      !localStorage.getItem(`${customPetImageStorageKey}:default`)
+    ) {
+      throw new Error("custom pet appearance requires a default image");
+    }
     const state = loadDemo();
     state.bootstrap.settings.petAppearanceId = appearanceId;
     storeDemo(state);

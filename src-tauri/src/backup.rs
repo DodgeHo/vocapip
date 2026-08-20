@@ -1,11 +1,15 @@
 use crate::db::{DbState, DATABASE_VERSION};
 use crate::error::{AppError, AppResult};
-use crate::models::{BackupDocument, BootstrapPayload, ExportResult};
+#[cfg(test)]
+use crate::models::BootstrapPayload;
+use crate::models::{BackupDocument, ExportResult};
+#[cfg(test)]
 use crate::repository::bootstrap_with_connection;
+use crate::repository::{read_settings, validate_settings_with_connection};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use chrono::Utc;
 use rusqlite::types::{Value as SqlValue, ValueRef};
-use rusqlite::{params_from_iter, Connection};
+use rusqlite::{params_from_iter, Connection, Transaction};
 use serde_json::{Map, Number, Value};
 use std::collections::{BTreeMap, HashSet};
 use std::fs::{self, OpenOptions};
@@ -105,7 +109,22 @@ pub fn export_data(state: &DbState, path: &Path) -> AppResult<ExportResult> {
     })
 }
 
+#[cfg(test)]
 pub fn import_data(state: &DbState, path: &Path) -> AppResult<BootstrapPayload> {
+    let _guard = state
+        .write_lock
+        .lock()
+        .map_err(|_| AppError::Resource("database write lock is poisoned".into()))?;
+    let mut connection = state.connect()?;
+    let transaction = import_document_transaction(&mut connection, path)?;
+    transaction.commit()?;
+    bootstrap_with_connection(&connection)
+}
+
+pub fn import_document_transaction<'a>(
+    connection: &'a mut Connection,
+    path: &Path,
+) -> AppResult<Transaction<'a>> {
     let metadata = validate_import_path(path)?;
     if metadata.len() > MAX_BACKUP_BYTES {
         return Err(AppError::InvalidData(
@@ -116,11 +135,6 @@ pub fn import_data(state: &DbState, path: &Path) -> AppResult<BootstrapPayload> 
     let document: BackupDocument = serde_json::from_slice(&bytes)?;
     validate_document(&document)?;
 
-    let _guard = state
-        .write_lock
-        .lock()
-        .map_err(|_| AppError::Resource("database write lock is poisoned".into()))?;
-    let mut connection = state.connect()?;
     let transaction = connection.transaction()?;
     for table in DELETE_ORDER {
         transaction.execute(&format!("DELETE FROM {table}"), [])?;
@@ -131,8 +145,9 @@ pub fn import_data(state: &DbState, path: &Path) -> AppResult<BootstrapPayload> 
         }
     }
     ensure_singletons(&transaction)?;
-    transaction.commit()?;
-    bootstrap_with_connection(&connection)
+    let imported_settings = read_settings(&transaction)?;
+    validate_settings_with_connection(&transaction, &imported_settings)?;
+    Ok(transaction)
 }
 
 fn validate_export_path(path: &Path) -> AppResult<()> {
@@ -213,6 +228,23 @@ fn validate_document(document: &BackupDocument) -> AppResult<()> {
         return Err(AppError::InvalidData(
             "backup contains an unknown or missing table".into(),
         ));
+    }
+    if document.schema_version == BACKUP_SCHEMA_VERSION {
+        let custom_selected = document.tables.get("settings").is_some_and(|rows| {
+            rows.iter()
+                .any(|row| row.get("pet_appearance_id").and_then(Value::as_str) == Some("custom"))
+        });
+        let has_default = document.tables.get("pet_assets").is_some_and(|rows| {
+            rows.iter().any(|row| {
+                row.get("appearance_id").and_then(Value::as_str) == Some("custom")
+                    && row.get("state").and_then(Value::as_str) == Some("default")
+            })
+        });
+        if custom_selected && !has_default {
+            return Err(AppError::InvalidData(
+                "custom pet appearance requires a default image in the backup".into(),
+            ));
+        }
     }
     Ok(())
 }
@@ -353,13 +385,10 @@ fn ensure_singletons(connection: &Connection) -> AppResult<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::{run_migrations, DbState};
+    use crate::db::DbState;
 
     fn test_state(path: std::path::PathBuf) -> DbState {
-        let state = DbState::for_test(path);
-        let mut connection = state.connect().unwrap();
-        run_migrations(&mut connection).unwrap();
-        state
+        DbState::initialize(path).unwrap()
     }
 
     #[test]
@@ -459,6 +488,65 @@ mod tests {
     fn import_rejects_relative_paths() {
         let result = validate_import_path(Path::new("backup.json"));
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn malformed_import_keeps_existing_database_unchanged() {
+        let directory = tempfile::tempdir().unwrap();
+        let state = test_state(directory.path().join("user.sqlite"));
+        state
+            .connect()
+            .unwrap()
+            .execute("UPDATE user_progress SET total_xp = 321", [])
+            .unwrap();
+        let backup = directory.path().join("broken.json");
+        let mut document: BackupDocument = BackupDocument {
+            schema_version: BACKUP_SCHEMA_VERSION,
+            product: PRODUCT_NAME.into(),
+            exported_at: Utc::now().to_rfc3339(),
+            database_user_version: DATABASE_VERSION,
+            tables: BACKUP_TABLES
+                .iter()
+                .map(|table| ((*table).to_string(), Vec::new()))
+                .collect(),
+        };
+        document.tables.insert(
+            "user_progress".into(),
+            vec![serde_json::json!({ "not_a_column": 1 })],
+        );
+        std::fs::write(&backup, serde_json::to_vec(&document).unwrap()).unwrap();
+
+        assert!(import_data(&state, &backup).is_err());
+        let xp: i64 = state
+            .connect()
+            .unwrap()
+            .query_row(
+                "SELECT total_xp FROM user_progress WHERE id = 1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(xp, 321);
+    }
+
+    #[test]
+    fn custom_backup_without_default_image_is_rejected() {
+        let document = BackupDocument {
+            schema_version: BACKUP_SCHEMA_VERSION,
+            product: PRODUCT_NAME.into(),
+            exported_at: Utc::now().to_rfc3339(),
+            database_user_version: DATABASE_VERSION,
+            tables: BACKUP_TABLES
+                .iter()
+                .map(|table| ((*table).to_string(), Vec::new()))
+                .collect(),
+        };
+        let mut document = document;
+        document.tables.insert(
+            "settings".into(),
+            vec![serde_json::json!({ "pet_appearance_id": "custom" })],
+        );
+        assert!(validate_document(&document).is_err());
     }
 
     #[test]

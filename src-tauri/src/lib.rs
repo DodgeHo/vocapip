@@ -147,6 +147,7 @@ pub fn run() {
             commands::list_pet_appearances,
             commands::import_pet_image,
             commands::remove_pet_image,
+            commands::clear_pet_images,
             commands::get_pet_asset,
             commands::set_pet_appearance,
         ])

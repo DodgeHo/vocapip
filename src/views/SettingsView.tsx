@@ -1,5 +1,6 @@
 import { ImagePlus, RotateCcw, Trash2, Upload } from "lucide-react";
-import { useEffect, useState } from "react";
+import { listen } from "@tauri-apps/api/event";
+import { useEffect, useRef, useState } from "react";
 import { AppShell } from "../components/AppShell";
 import { PetAppearancePreview } from "../components/PetCharacter";
 import { Toggle } from "../components/Toggle";
@@ -36,6 +37,11 @@ const customPetSlots: PetAssetState[] = [
   "correct",
   "upgrade",
 ];
+
+function describeSettingsError(prefix: string, cause: unknown): string {
+  const detail = cause instanceof Error ? cause.message.trim() : "";
+  return detail ? `${prefix}：${detail}` : `${prefix}。`;
+}
 
 function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -85,168 +91,241 @@ export function SettingsView() {
   const [licenseOpen, setLicenseOpen] = useState(false);
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
+  const [assetBusy, setAssetBusy] = useState(false);
+  const [appearanceBusy, setAppearanceBusy] = useState(false);
+  const [dataBusy, setDataBusy] = useState(false);
   const [error, setError] = useState("");
   const [customAssets, setCustomAssets] = useState<CustomPetAssets>({});
   const [petImageError, setPetImageError] = useState("");
+  const mounted = useRef(false);
+  const loadSequence = useRef(0);
+  const modifying = saving || assetBusy || appearanceBusy || dataBusy;
   const load = async () => {
+    const request = ++loadSequence.current;
+    if (!mounted.current) return;
     setError("");
     try {
-      const [next, assets] = await Promise.all([
-        api.bootstrap(),
-        api.getPetAssets(),
-      ]);
+      const next = await api.bootstrap();
+      const assets = await api.getPetAssets();
+      if (!mounted.current || request !== loadSequence.current) return;
       setData(next);
       setSettings(next.settings);
       setCustomAssets(assets);
-    } catch {
-      setError(zhCN.common.unknownError);
+    } catch (cause) {
+      if (mounted.current && request === loadSequence.current)
+        setError(describeSettingsError(zhCN.settings.loadError, cause));
     }
   };
   useEffect(() => {
+    mounted.current = true;
     void load();
+    if (!("__TAURI_INTERNALS__" in window))
+      return () => {
+        mounted.current = false;
+      };
+    let cancelled = false;
+    const disposers: Array<() => void> = [];
+    void Promise.allSettled([
+      listen("vocapip://settings-changed", () => void load()),
+      listen("vocapip://pet-assets-changed", () => void load()),
+      listen("vocapip://pet-appearance-changed", () => void load()),
+      listen("vocapip://backup-imported", () => void load()),
+    ]).then((results) => {
+      const failed = results.find((result) => result.status === "rejected");
+      results.forEach((result) => {
+        if (result.status === "fulfilled") {
+          if (cancelled) result.value();
+          else disposers.push(result.value);
+        }
+      });
+      if (failed && mounted.current)
+        setError(
+          describeSettingsError(zhCN.settings.eventSyncError, failed.reason),
+        );
+    });
+    return () => {
+      cancelled = true;
+      mounted.current = false;
+      disposers.forEach((dispose) => dispose());
+    };
   }, []);
-  const patch = (next: Partial<AppSettings>) =>
+  const patch = (next: Partial<AppSettings>) => {
+    if (!mounted.current) return;
     setSettings((current) => (current ? { ...current, ...next } : current));
-  const applyAlwaysOnTop = async (checked: boolean) => {
-    const previous = settings?.alwaysOnTop ?? false;
-    patch({ alwaysOnTop: checked });
-    try {
-      const applied = await api.setAlwaysOnTop(checked);
-      patch({ alwaysOnTop: applied });
-      setStatus(zhCN.settings.appliedImmediately);
-      setError("");
-    } catch {
-      patch({ alwaysOnTop: previous });
-      setStatus("");
-      setError(zhCN.common.unknownError);
-    }
   };
   const saveSettings = async () => {
-    if (!settings || saving) return;
+    if (!settings || modifying) return;
     setSaving(true);
     setStatus(zhCN.common.loading);
     try {
-      const autostart = await api.setAutostart(settings.autostart);
-      const alwaysOnTop = await api.setAlwaysOnTop(settings.alwaysOnTop);
-      const saved = await api.updateSettings({
-        ...settings,
-        autostart,
-        alwaysOnTop,
-      });
+      const saved = await api.updateSettings(settings);
+      if (!mounted.current) return;
+      setData((current) =>
+        current ? { ...current, settings: saved } : current,
+      );
       setSettings(saved);
       setStatus(zhCN.common.saved);
       setError("");
-    } catch {
-      setStatus("");
-      setError(zhCN.common.unknownError);
+    } catch (cause) {
+      if (mounted.current) {
+        setStatus("");
+        setError(describeSettingsError(zhCN.settings.saveError, cause));
+      }
     } finally {
-      setSaving(false);
+      if (mounted.current) setSaving(false);
     }
   };
   const showLicenses = async () => {
     setLicenseOpen(true);
     if (!licenses)
       try {
-        setLicenses(await api.getLicenseDocuments());
-      } catch {
-        setError(zhCN.common.unknownError);
+        const next = await api.getLicenseDocuments();
+        if (mounted.current) setLicenses(next);
+      } catch (cause) {
+        if (mounted.current)
+          setError(
+            describeSettingsError(zhCN.settings.licenseLoadError, cause),
+          );
       }
   };
   const exportData = async () => {
+    if (modifying) return;
     try {
       const result = await api.exportData();
-      if (result) setStatus(zhCN.settings.exportDone);
-    } catch {
-      setError(zhCN.common.unknownError);
+      if (result && mounted.current) setStatus(zhCN.settings.exportDone);
+    } catch (cause) {
+      if (mounted.current)
+        setError(describeSettingsError(zhCN.settings.exportError, cause));
     }
   };
   const importData = async () => {
+    if (modifying) return;
+    setDataBusy(true);
     try {
       const result = await api.importData();
       if (result) {
-        setData(result);
-        setSettings(result.settings);
+        const refreshed = await api.bootstrap();
+        const assets = await api.getPetAssets();
+        if (!mounted.current) return;
+        setData(refreshed);
+        setSettings(refreshed.settings);
+        setCustomAssets(assets);
         setStatus(zhCN.settings.importDone);
       }
-    } catch {
-      setError(zhCN.common.unknownError);
+    } catch (cause) {
+      if (mounted.current)
+        setError(describeSettingsError(zhCN.settings.importError, cause));
+    } finally {
+      if (mounted.current) setDataBusy(false);
     }
   };
-  const choosePetAppearance = async (appearanceId: PetAppearanceId) => {
+  const choosePetAppearance = async (
+    appearanceId: PetAppearanceId,
+  ): Promise<boolean> => {
+    if (appearanceBusy) return false;
     const previous = settings?.petAppearanceId ?? "mint";
+    setAppearanceBusy(true);
     patch({ petAppearanceId: appearanceId });
     try {
       const applied = await api.setPetAppearance(appearanceId);
+      if (!mounted.current) return false;
       patch({ petAppearanceId: applied });
       setStatus(zhCN.settings.appliedImmediately);
       setError("");
-    } catch {
-      patch({ petAppearanceId: previous });
-      setError(zhCN.common.unknownError);
+      return true;
+    } catch (cause) {
+      if (mounted.current) {
+        patch({ petAppearanceId: previous });
+        setError(
+          describeSettingsError(zhCN.settings.petAppearanceError, cause),
+        );
+      }
+      return false;
+    } finally {
+      if (mounted.current) setAppearanceBusy(false);
     }
   };
   const uploadCustomPet = async (
     state: PetAssetState,
     file: File | undefined,
   ) => {
-    if (!file) return;
+    if (!file || modifying) return;
+    setAssetBusy(true);
     setPetImageError("");
     try {
       const dataUrl = await validateCustomPetFile(file);
       const saved = await api.importPetImage(state, dataUrl);
+      if (!mounted.current) return;
       setCustomAssets((current) => ({
         ...current,
         [state]: saved.dataUrl,
       }));
-      await choosePetAppearance("custom");
-      setStatus(zhCN.settings.petImageReady);
+      const canEnableCustom =
+        state === "default" || Boolean(customAssets.default);
+      if (canEnableCustom) {
+        const enabled =
+          state === "default" ? true : await choosePetAppearance("custom");
+        if (state === "default") patch({ petAppearanceId: "custom" });
+        if (enabled && mounted.current) setStatus(zhCN.settings.petImageReady);
+      } else {
+        setStatus(zhCN.settings.petImageSavedNeedsDefault);
+      }
     } catch (cause) {
-      setPetImageError(
-        cause instanceof Error
-          ? cause.message
-          : zhCN.settings.petImageReadError,
-      );
+      if (mounted.current)
+        setPetImageError(
+          describeSettingsError(zhCN.settings.customPetSaveError, cause),
+        );
+    } finally {
+      if (mounted.current) setAssetBusy(false);
     }
   };
   const removeCustomPetImage = async (state: PetAssetState) => {
+    if (modifying) return;
+    setAssetBusy(true);
     try {
-      await api.removePetImage(state);
-      const remainingAssets = Object.entries(customAssets).filter(
-        ([assetState, dataUrl]) => assetState !== state && Boolean(dataUrl),
-      );
+      const appearance = await api.removePetImage(state);
+      if (!mounted.current) return;
       setCustomAssets((current) => {
         const next = { ...current };
         delete next[state];
         return next;
       });
-      if (settings?.petAppearanceId === "custom" && !remainingAssets.length)
-        await choosePetAppearance("mint");
+      patch({ petAppearanceId: appearance });
       setPetImageError("");
       setStatus(zhCN.settings.petImageRemoved);
-    } catch {
-      setPetImageError(zhCN.common.unknownError);
+    } catch (cause) {
+      if (mounted.current)
+        setPetImageError(
+          describeSettingsError(zhCN.settings.customPetRemoveError, cause),
+        );
+    } finally {
+      if (mounted.current) setAssetBusy(false);
     }
   };
   const clearCustomPet = async () => {
+    if (modifying) return;
+    setAssetBusy(true);
     try {
-      await Promise.all(
-        customPetSlots.map((state) => api.removePetImage(state)),
-      );
+      const appearance = await api.clearPetImages();
+      if (!mounted.current) return;
       setCustomAssets({});
-      await choosePetAppearance("mint");
+      patch({ petAppearanceId: appearance });
       setPetImageError("");
       setStatus(zhCN.settings.petImagesRemoved);
-    } catch {
-      setPetImageError(zhCN.common.unknownError);
+    } catch (cause) {
+      if (mounted.current)
+        setPetImageError(
+          describeSettingsError(zhCN.settings.customPetClearError, cause),
+        );
+    } finally {
+      if (mounted.current) setAssetBusy(false);
     }
   };
   if (!settings || !data)
     return (
       <AppShell active="settings">
         <div className="list-message">
-          <strong>
-            {error ? zhCN.common.unknownError : zhCN.common.loading}
-          </strong>
+          <strong>{error || zhCN.common.loading}</strong>
           {error && (
             <button
               type="button"
@@ -263,6 +342,7 @@ export function SettingsView() {
     (item) => item.id === settings.languagePackId,
   );
   const hasCustomAssets = customPetSlots.some((state) => customAssets[state]);
+  const hasCustomDefaultAsset = Boolean(customAssets.default);
   return (
     <AppShell active="settings">
       <header className="page-header">
@@ -271,13 +351,17 @@ export function SettingsView() {
           <h1>{zhCN.settings.title}</h1>
           <p>{zhCN.settings.subtitle}</p>
         </div>
-        <button
-          type="button"
-          className="primary save-settings"
-          onClick={() => void saveSettings()}
-        >
-          {status || zhCN.common.save}
-        </button>
+        <div className="settings-save-actions">
+          <button
+            type="button"
+            className="primary save-settings"
+            disabled={modifying}
+            onClick={() => void saveSettings()}
+          >
+            {saving ? zhCN.common.loading : zhCN.common.save}
+          </button>
+          {status && <span role="status">{status}</span>}
+        </div>
       </header>
       {error && (
         <div className="error-banner" role="alert">
@@ -303,6 +387,7 @@ export function SettingsView() {
                 max="240"
                 step="5"
                 value={settings.reminderIntervalMinutes}
+                disabled={modifying}
                 onChange={(event) =>
                   patch({
                     reminderIntervalMinutes: Math.min(
@@ -326,6 +411,7 @@ export function SettingsView() {
                 min="1"
                 max="100"
                 value={settings.dailyQuota}
+                disabled={modifying}
                 onChange={(event) =>
                   patch({
                     dailyQuota: Math.min(
@@ -346,6 +432,7 @@ export function SettingsView() {
             <Toggle
               label={zhCN.settings.quietHours}
               checked={settings.quietHoursEnabled}
+              disabled={modifying}
               onChange={(checked) => patch({ quietHoursEnabled: checked })}
             />
             <div className="time-controls">
@@ -354,7 +441,7 @@ export function SettingsView() {
                 <input
                   type="time"
                   value={settings.quietStart}
-                  disabled={!settings.quietHoursEnabled}
+                  disabled={!settings.quietHoursEnabled || modifying}
                   onChange={(event) =>
                     patch({ quietStart: event.target.value })
                   }
@@ -366,7 +453,7 @@ export function SettingsView() {
                 <input
                   type="time"
                   value={settings.quietEnd}
-                  disabled={!settings.quietHoursEnabled}
+                  disabled={!settings.quietHoursEnabled || modifying}
                   onChange={(event) => patch({ quietEnd: event.target.value })}
                 />
               </label>
@@ -383,6 +470,7 @@ export function SettingsView() {
             <Toggle
               label={zhCN.settings.speechAutoRead}
               checked={settings.speechEnabled}
+              disabled={modifying}
               onChange={(checked) => patch({ speechEnabled: checked })}
             />
           </div>
@@ -400,7 +488,10 @@ export function SettingsView() {
                 type="button"
                 role="radio"
                 aria-checked={settings.petAppearanceId === appearance}
-                disabled={appearance === "custom" && !hasCustomAssets}
+                disabled={
+                  modifying ||
+                  (appearance === "custom" && !hasCustomDefaultAsset)
+                }
                 className={
                   "appearance-option" +
                   (settings.petAppearanceId === appearance
@@ -410,7 +501,7 @@ export function SettingsView() {
                 onClick={() => void choosePetAppearance(appearance)}
                 key={appearance}
               >
-                {appearance === "custom" && !hasCustomAssets ? (
+                {appearance === "custom" && !hasCustomDefaultAsset ? (
                   <span
                     className="appearance-upload-placeholder"
                     aria-hidden="true"
@@ -460,6 +551,7 @@ export function SettingsView() {
                       className="icon-button"
                       htmlFor={`custom-pet-image-${state}`}
                       title={uploadLabel}
+                      aria-disabled={modifying}
                     >
                       <Upload aria-hidden="true" size={16} />
                       <span className="visually-hidden">{uploadLabel}</span>
@@ -470,6 +562,7 @@ export function SettingsView() {
                       type="file"
                       accept="image/png,image/jpeg,image/webp"
                       aria-label={uploadLabel}
+                      disabled={modifying}
                       onChange={(event) => {
                         void uploadCustomPet(state, event.target.files?.[0]);
                         event.currentTarget.value = "";
@@ -481,6 +574,7 @@ export function SettingsView() {
                         className="icon-button"
                         title={`${zhCN.settings.removePetImage}：${zhCN.settings.customPetSlots[state]}`}
                         aria-label={`${zhCN.settings.removePetImage}：${zhCN.settings.customPetSlots[state]}`}
+                        disabled={modifying}
                         onClick={() => void removeCustomPetImage(state)}
                       >
                         <Trash2 aria-hidden="true" size={16} />
@@ -495,6 +589,7 @@ export function SettingsView() {
             <button
               type="button"
               className="secondary"
+              disabled={modifying}
               onClick={() => void choosePetAppearance("mint")}
             >
               <RotateCcw aria-hidden="true" size={16} />
@@ -504,6 +599,7 @@ export function SettingsView() {
               <button
                 type="button"
                 className="secondary danger-action"
+                disabled={modifying}
                 onClick={() => void clearCustomPet()}
               >
                 <Trash2 aria-hidden="true" size={16} />
@@ -525,6 +621,7 @@ export function SettingsView() {
             <Toggle
               label={zhCN.settings.autostart}
               checked={settings.autostart}
+              disabled={modifying}
               onChange={(checked) => patch({ autostart: checked })}
             />
           </div>
@@ -536,7 +633,8 @@ export function SettingsView() {
             <Toggle
               label={zhCN.settings.alwaysOnTop}
               checked={settings.alwaysOnTop}
-              onChange={(checked) => void applyAlwaysOnTop(checked)}
+              disabled={modifying}
+              onChange={(checked) => patch({ alwaysOnTop: checked })}
             />
           </div>
         </section>
@@ -557,6 +655,7 @@ export function SettingsView() {
             <select
               id="pack"
               value={settings.languagePackId}
+              disabled={modifying}
               onChange={(event) =>
                 patch({ languagePackId: event.target.value })
               }
@@ -579,6 +678,7 @@ export function SettingsView() {
             <button
               type="button"
               className="secondary"
+              disabled={modifying}
               onClick={() => void exportData()}
             >
               {zhCN.settings.export}
@@ -592,6 +692,7 @@ export function SettingsView() {
             <button
               type="button"
               className="secondary"
+              disabled={modifying}
               onClick={() => void importData()}
             >
               {zhCN.settings.import}

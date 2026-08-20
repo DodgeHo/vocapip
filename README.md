@@ -15,7 +15,7 @@ VocaPip 是一个面向 Windows 10/11 x64 的纯离线英语词汇桌宠。应�
 
 ## 下载
 
-Windows 10/11 x64 安装包、便携版和 SHA-256 校验文件见 [VocaPip 0.1.0 Release](https://github.com/DodgeHo/vocapip/releases/tag/v0.1.0)。当前二进制未签名，Windows SmartScreen 可能显示警告；运行前请核对 Release 中的 `SHA256SUMS.txt`。
+Windows 10/11 x64 安装包、便携版和 SHA-256 校验文件见 [VocaPip 0.3.0 Release](https://github.com/DodgeHo/vocapip/releases/tag/v0.3.0)。当前二进制未签名，Windows SmartScreen 可能显示警告；运行前请核对 Release 中的 `SHA256SUMS.txt`。
 
 ## 开发运行
 
