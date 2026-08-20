@@ -7,12 +7,16 @@ use rusqlite::{params, Connection, OptionalExtension, Row, Transaction};
 use std::collections::BTreeMap;
 use uuid::Uuid;
 
+pub const ALL_LANGUAGE_PACK_ID: &str = "zh-CN__en.vocabularybook.all";
+
 const CARD_SELECT: &str = "
 SELECT c.id, l.word, l.phonetic, l.part_of_speech, l.definition_zh, l.example_en,
        l.example_zh, l.tier, l.frequency_rank, c.status,
        EXISTS(SELECT 1 FROM favorites f WHERE f.card_id = c.id),
        c.last_review_at, c.due_at, c.stability, c.difficulty, c.elapsed_days,
-       c.scheduled_days, c.learning_steps, c.reps, c.lapses, c.fsrs_state
+       c.scheduled_days, c.learning_steps, c.reps, c.lapses, c.fsrs_state,
+       l.pack_id,
+       (SELECT p.name FROM language_packs p WHERE p.id = l.pack_id)
 FROM study_cards c
 JOIN lexemes l ON l.id = c.lexeme_id";
 
@@ -42,9 +46,12 @@ pub fn bootstrap_with_connection(connection: &Connection) -> AppResult<Bootstrap
     };
 
     let mut statement = connection.prepare(
-        "SELECT id, name, source_language, target_language, explanation_language,
-                pack_version, compatibility_version, record_count
-         FROM language_packs ORDER BY name",
+        "SELECT p.id, p.name, p.source_language, p.target_language, p.explanation_language,
+                p.pack_version, p.compatibility_version, p.record_count,
+                COUNT(DISTINCT LOWER(TRIM(l.word)))
+         FROM language_packs p
+         LEFT JOIN lexemes l ON l.pack_id = p.id
+         GROUP BY p.id ORDER BY p.name",
     )?;
     let language_packs = statement
         .query_map([], |row| {
@@ -57,9 +64,34 @@ pub fn bootstrap_with_connection(connection: &Connection) -> AppResult<Bootstrap
                 pack_version: row.get(5)?,
                 compatibility_version: row.get(6)?,
                 record_count: row.get(7)?,
+                unique_word_count: row.get(8)?,
+                composite: false,
             })
         })?
         .collect::<Result<Vec<_>, _>>()?;
+    let (record_count, unique_word_count): (i64, i64) = connection.query_row(
+        "SELECT COUNT(*), COUNT(DISTINCT LOWER(TRIM(word)))
+         FROM lexemes
+         WHERE pack_id LIKE 'zh-CN__en.vocabularybook.%'",
+        [],
+        |row| Ok((row.get(0)?, row.get(1)?)),
+    )?;
+    let mut language_packs = language_packs;
+    language_packs.insert(
+        0,
+        LanguagePackSummary {
+            id: ALL_LANGUAGE_PACK_ID.into(),
+            name: "全部词库".into(),
+            source_language: "zh-CN".into(),
+            target_language: "en".into(),
+            explanation_language: "zh-CN".into(),
+            pack_version: "2026.08.19".into(),
+            compatibility_version: "2".into(),
+            record_count,
+            unique_word_count,
+            composite: true,
+        },
+    );
 
     Ok(BootstrapPayload {
         progress,
@@ -119,18 +151,31 @@ pub fn get_next_card_with_connection(
         comfort
     };
 
+    let pack_filter = "((?2 = 'zh-CN__en.vocabularybook.all' AND l.pack_id LIKE 'zh-CN__en.vocabularybook.%' AND NOT EXISTS (
+           SELECT 1 FROM lexemes duplicate
+           WHERE LOWER(TRIM(duplicate.word)) = LOWER(TRIM(l.word))
+             AND duplicate.pack_id LIKE 'zh-CN__en.vocabularybook.%'
+             AND (
+               CAST(SUBSTR(duplicate.tier, 2) AS INTEGER) < CAST(SUBSTR(l.tier, 2) AS INTEGER)
+               OR (CAST(SUBSTR(duplicate.tier, 2) AS INTEGER) = CAST(SUBSTR(l.tier, 2) AS INTEGER)
+                   AND COALESCE(duplicate.frequency_rank, 2147483647) < COALESCE(l.frequency_rank, 2147483647))
+               OR (CAST(SUBSTR(duplicate.tier, 2) AS INTEGER) = CAST(SUBSTR(l.tier, 2) AS INTEGER)
+                   AND COALESCE(duplicate.frequency_rank, 2147483647) = COALESCE(l.frequency_rank, 2147483647)
+                   AND duplicate.id < l.id)
+             )
+         )) OR (?2 <> 'zh-CN__en.vocabularybook.all' AND l.pack_id = ?2))";
     let new_sql = if challenge_slot {
         format!(
             "{CARD_SELECT}
              WHERE c.id != ?1 AND c.status = 'new' AND l.learning_ready = 1
-               AND l.pack_id = ?2 AND l.tier = ?3
+               AND {pack_filter} AND l.tier = ?3
              ORDER BY l.frequency_rank ASC, l.id ASC LIMIT 1"
         )
     } else {
         format!(
             "{CARD_SELECT}
              WHERE c.id != ?1 AND c.status = 'new' AND l.learning_ready = 1
-               AND l.pack_id = ?2 AND CAST(SUBSTR(l.tier, 2) AS INTEGER) <= ?3
+               AND {pack_filter} AND CAST(SUBSTR(l.tier, 2) AS INTEGER) <= ?3
              ORDER BY CAST(SUBSTR(l.tier, 2) AS INTEGER) DESC, l.frequency_rank ASC, l.id ASC LIMIT 1"
         )
     };
@@ -152,7 +197,7 @@ pub fn get_next_card_with_connection(
 
     let fallback_sql = format!(
         "{CARD_SELECT}
-         WHERE c.id != ?1 AND c.status = 'new' AND l.learning_ready = 1 AND l.pack_id = ?2
+         WHERE c.id != ?1 AND c.status = 'new' AND l.learning_ready = 1 AND {pack_filter}
          ORDER BY ABS(CAST(SUBSTR(l.tier, 2) AS INTEGER) - ?3), l.frequency_rank ASC LIMIT 1"
     );
     Ok(connection
@@ -325,9 +370,11 @@ pub fn list_library(state: &DbState, query: &LibraryQuery) -> AppResult<LibraryP
             )))
         }
     };
+    let limit = query.limit.clamp(1, 100);
+    let offset = query.offset;
     let sql = format!(
         "{CARD_SELECT} WHERE (l.word LIKE ?1 ESCAPE '\\' OR l.definition_zh LIKE ?1 ESCAPE '\\') AND {filter}
-         ORDER BY COALESCE(c.last_review_at, '') DESC, l.frequency_rank ASC LIMIT 1000"
+         ORDER BY COALESCE(c.last_review_at, '') DESC, l.frequency_rank ASC LIMIT {limit} OFFSET {offset}"
     );
     let mut statement = connection.prepare(&sql)?;
     let items = match query.status.as_str() {
@@ -338,7 +385,7 @@ pub fn list_library(state: &DbState, query: &LibraryQuery) -> AppResult<LibraryP
             .query_map(params![search, cutoff], card_from_row)?
             .collect::<Result<Vec<_>, _>>()?,
         _ => statement
-            .query_map([search], card_from_row)?
+            .query_map([search.clone()], card_from_row)?
             .collect::<Result<Vec<_>, _>>()?,
     };
 
@@ -362,11 +409,32 @@ pub fn list_library(state: &DbState, query: &LibraryQuery) -> AppResult<LibraryP
         "recent".into(),
         connection.query_row(
             "SELECT COUNT(*) FROM study_cards c WHERE c.last_review_at >= ?1",
-            [cutoff],
+            [cutoff.clone()],
             |row| row.get(0),
         )?,
     );
-    Ok(LibraryPayload { items, counts })
+    let matching_count = match query.status.as_str() {
+        "new" | "learning" | "review" | "relearning" => connection.query_row(
+            &format!("SELECT COUNT(*) FROM study_cards c JOIN lexemes l ON l.id = c.lexeme_id WHERE (l.word LIKE ?1 ESCAPE '\\' OR l.definition_zh LIKE ?1 ESCAPE '\\') AND {filter}"),
+            params![search, query.status],
+            |row| row.get::<_, i64>(0),
+        )?,
+        "recent" => connection.query_row(
+            &format!("SELECT COUNT(*) FROM study_cards c JOIN lexemes l ON l.id = c.lexeme_id WHERE (l.word LIKE ?1 ESCAPE '\\' OR l.definition_zh LIKE ?1 ESCAPE '\\') AND {filter}"),
+            params![search, cutoff],
+            |row| row.get::<_, i64>(0),
+        )?,
+        _ => connection.query_row(
+            &format!("SELECT COUNT(*) FROM study_cards c JOIN lexemes l ON l.id = c.lexeme_id WHERE (l.word LIKE ?1 ESCAPE '\\' OR l.definition_zh LIKE ?1 ESCAPE '\\') AND {filter}"),
+            params![search],
+            |row| row.get::<_, i64>(0),
+        )?,
+    };
+    Ok(LibraryPayload {
+        items,
+        counts,
+        has_more: i64::from(offset) + i64::from(limit) < matching_count,
+    })
 }
 
 fn count_where(connection: &Connection, clause: &str, value: Option<&str>) -> AppResult<i64> {
@@ -662,6 +730,8 @@ fn card_from_row(row: &Row<'_>) -> rusqlite::Result<LearningCard> {
         frequency_rank: row.get(8)?,
         status: row.get(9)?,
         favorite: row.get::<_, i64>(10)? != 0,
+        source_pack_id: row.get(21)?,
+        source_pack_name: row.get(22)?,
         last_studied_at: row.get(11)?,
         next_review_at: row.get(12)?,
         fsrs,
@@ -677,6 +747,86 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let state = DbState::initialize(directory.path().join("test.sqlite")).unwrap();
         (directory, state)
+    }
+
+    fn insert_candidate(
+        connection: &Connection,
+        pack_id: &str,
+        pack_name: &str,
+        lexeme_id: &str,
+        word: &str,
+        tier: &str,
+        frequency_rank: i64,
+    ) {
+        connection
+            .execute(
+                "INSERT INTO language_packs (id, name, source_language, target_language, explanation_language, pack_version, compatibility_version, record_count, pack_license, imported_at)
+                 VALUES (?1, ?2, 'zh-CN', 'en', 'zh-CN', 'test', '2', 1, 'CC-BY-SA-4.0', '2026-08-19T00:00:00Z')",
+                params![pack_id, pack_name],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO lexemes (id, pack_id, word, phonetic, part_of_speech, definition_zh, example_en, example_zh, tier, frequency_rank, record_license, source_id, source_url, provenance_json, learning_ready)
+                 VALUES (?1, ?2, ?3, '', 'n.', '回声', '', '', ?4, ?5, 'CC-BY-SA-4.0', ?1, 'offline', '{}', 1)",
+                params![lexeme_id, pack_id, word, tier, frequency_rank],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO study_cards (id, lexeme_id, created_at, updated_at)
+                 VALUES (?1, ?2, '2026-08-19T00:00:00Z', '2026-08-19T00:00:00Z')",
+                params![format!("card:{lexeme_id}"), lexeme_id],
+            )
+            .unwrap();
+    }
+
+    #[test]
+    fn composite_scope_deduplicates_and_prefers_easier_higher_frequency_record() {
+        let (_directory, state) = test_state();
+        let connection = state.connect().unwrap();
+        insert_candidate(
+            &connection,
+            "zh-CN__en.vocabularybook.hard",
+            "挑战词书",
+            "duplicate-hard",
+            "Echo",
+            "T2",
+            1,
+        );
+        insert_candidate(
+            &connection,
+            "zh-CN__en.vocabularybook.easy-slow",
+            "基础词书 A",
+            "duplicate-easy-slow",
+            " echo ",
+            "T1",
+            200,
+        );
+        insert_candidate(
+            &connection,
+            "zh-CN__en.vocabularybook.easy-fast",
+            "基础词书 B",
+            "duplicate-easy-fast",
+            "ECHO",
+            "T1",
+            50,
+        );
+        connection
+            .execute(
+                "UPDATE learner_profile SET active_pack_id = ?1, current_comfort_tier = 'T2' WHERE id = 1",
+                [ALL_LANGUAGE_PACK_ID],
+            )
+            .unwrap();
+
+        let card = get_next_card_with_connection(&connection, None)
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(card.id, "card:duplicate-easy-fast");
+        assert_eq!(card.tier, LevelBand::T1);
+        assert_eq!(card.frequency_rank, 50);
+        assert_eq!(card.source_pack_name.as_deref(), Some("基础词书 B"));
     }
 
     #[test]

@@ -51,6 +51,8 @@ export interface LearningCard {
   frequencyRank: number;
   status: CardStatus;
   favorite: boolean;
+  sourcePackId?: string;
+  sourcePackName?: string;
   lastStudiedAt?: string;
   nextReviewAt?: string;
   fsrs?: FsrsCardSnapshot;
@@ -76,6 +78,8 @@ export interface LanguagePackSummary {
   packVersion: string;
   compatibilityVersion: string;
   recordCount: number;
+  uniqueWordCount: number;
+  composite: boolean;
 }
 export interface AppSettings {
   reminderIntervalMinutes: number;
@@ -112,10 +116,13 @@ export interface ReviewOutcome {
 export interface LibraryQuery {
   search: string;
   status: "all" | CardStatus | "favorite" | "recent";
+  limit: number;
+  offset: number;
 }
 export interface LibraryPayload {
   items: LearningCard[];
   counts: Record<LibraryQuery["status"], number>;
+  hasMore: boolean;
 }
 export interface PlacementAnswer {
   questionId: string;

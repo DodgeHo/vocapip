@@ -7,8 +7,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 pub const DATABASE_APPLICATION_ID: i64 = 1_280_333_140;
-pub const DATABASE_VERSION: i64 = 5;
+pub const DATABASE_VERSION: i64 = 7;
 const BUILTIN_PACK: &str = include_str!("../resources/language-packs/zh-CN-en.json");
+#[cfg(not(test))]
 const VOCABULARYBOOK_PACKS: &[&str] = &[
     include_str!(
         "../resources/language-packs/vocabularybook/zh-CN-en-vocabularybook-middle-school.json"
@@ -44,6 +45,14 @@ const MIGRATIONS: &[(i64, &str)] = &[
         5,
         include_str!("../migrations/0005_speech_and_pet_assets.sql"),
     ),
+    (
+        6,
+        include_str!("../migrations/0006_all_vocabulary_scope.sql"),
+    ),
+    (
+        7,
+        include_str!("../migrations/0007_all_vocabulary_scope_pilot_100.sql"),
+    ),
 ];
 
 #[derive(Debug)]
@@ -64,6 +73,11 @@ impl DbState {
         let mut connection = state.connect()?;
         run_migrations(&mut connection)?;
         install_pack_json(&mut connection, BUILTIN_PACK)?;
+        #[cfg(test)]
+        connection.execute_batch(
+            "UPDATE learner_profile SET active_pack_id = 'zh-CN__en.pilot.100'; UPDATE settings SET language_pack_id = 'zh-CN__en.pilot.100';",
+        )?;
+        #[cfg(not(test))]
         for pack in VOCABULARYBOOK_PACKS {
             install_pack_json(&mut connection, pack)?;
         }
@@ -155,7 +169,7 @@ pub fn install_pack_json(connection: &mut Connection, json: &str) -> AppResult<(
         params![pack.id, Utc::now().to_rfc3339()],
     )?;
     transaction.execute(
-        "UPDATE settings SET language_pack_id = CASE WHEN language_pack_id = '' OR language_pack_id = 'zh-CN__en.pilot' THEN ?1 ELSE language_pack_id END, updated_at = ?2 WHERE id = 1",
+        "UPDATE settings SET language_pack_id = CASE WHEN language_pack_id IN ('', 'zh-CN__en.pilot', 'zh-CN__en.pilot.100') THEN ?1 ELSE language_pack_id END, updated_at = ?2 WHERE id = 1",
         params![pack.id, Utc::now().to_rfc3339()],
     )?;
     transaction.commit()?;
@@ -303,6 +317,14 @@ fn upsert_record(
 mod tests {
     use super::*;
 
+    fn apply_migrations_through(connection: &Connection, maximum_version: i64) {
+        for (version, sql) in MIGRATIONS {
+            if *version <= maximum_version {
+                connection.execute_batch(sql).unwrap();
+            }
+        }
+    }
+
     #[test]
     fn migrations_are_incremental_and_idempotent() {
         let mut connection = Connection::open_in_memory().unwrap();
@@ -316,6 +338,111 @@ mod tests {
             .unwrap();
         assert_eq!(version, DATABASE_VERSION);
         assert_eq!(app_id, DATABASE_APPLICATION_ID);
+    }
+
+    #[test]
+    fn all_vocabulary_migration_moves_only_pilot_defaults() {
+        let mut connection = Connection::open_in_memory().unwrap();
+        apply_migrations_through(&connection, 5);
+        connection
+            .execute(
+                "UPDATE learner_profile SET active_pack_id = 'zh-CN__en.pilot' WHERE id = 1",
+                [],
+            )
+            .unwrap();
+
+        run_migrations(&mut connection).unwrap();
+
+        let settings_pack: String = connection
+            .query_row(
+                "SELECT language_pack_id FROM settings WHERE id = 1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let active_pack: String = connection
+            .query_row(
+                "SELECT active_pack_id FROM learner_profile WHERE id = 1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(settings_pack, "zh-CN__en.vocabularybook.all");
+        assert_eq!(active_pack, "zh-CN__en.vocabularybook.all");
+    }
+
+    #[test]
+    fn all_vocabulary_migration_preserves_explicit_pack_choice() {
+        let mut connection = Connection::open_in_memory().unwrap();
+        apply_migrations_through(&connection, 5);
+        connection
+            .execute(
+                "UPDATE settings SET language_pack_id = 'custom-pack' WHERE id = 1",
+                [],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "UPDATE learner_profile SET active_pack_id = 'custom-pack' WHERE id = 1",
+                [],
+            )
+            .unwrap();
+
+        run_migrations(&mut connection).unwrap();
+
+        let settings_pack: String = connection
+            .query_row(
+                "SELECT language_pack_id FROM settings WHERE id = 1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let active_pack: String = connection
+            .query_row(
+                "SELECT active_pack_id FROM learner_profile WHERE id = 1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(settings_pack, "custom-pack");
+        assert_eq!(active_pack, "custom-pack");
+    }
+
+    #[test]
+    fn all_vocabulary_migration_moves_legacy_pilot_100_defaults() {
+        let mut connection = Connection::open_in_memory().unwrap();
+        apply_migrations_through(&connection, 6);
+        connection
+            .execute(
+                "UPDATE settings SET language_pack_id = 'zh-CN__en.pilot.100' WHERE id = 1",
+                [],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "UPDATE learner_profile SET active_pack_id = 'zh-CN__en.pilot.100' WHERE id = 1",
+                [],
+            )
+            .unwrap();
+
+        run_migrations(&mut connection).unwrap();
+
+        let settings_pack: String = connection
+            .query_row(
+                "SELECT language_pack_id FROM settings WHERE id = 1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let active_pack: String = connection
+            .query_row(
+                "SELECT active_pack_id FROM learner_profile WHERE id = 1",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(settings_pack, "zh-CN__en.vocabularybook.all");
+        assert_eq!(active_pack, "zh-CN__en.vocabularybook.all");
     }
 
     #[test]
