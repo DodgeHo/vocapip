@@ -139,6 +139,7 @@
   "sourceCommit": "66f4a6db7b61eab3534d7b84f10eed312bca4ed6",
   "sourceLineCount": 54356,
   "sourceRepository": "KyleBing/english-vocabulary",
+  "uniqueWordCount": 14624,
   "upstreamChain": [
     "kajweb/dict",
     "KyleBing/dict",

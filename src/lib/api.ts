@@ -70,12 +70,12 @@ export interface CommandContract {
   stop_speaking: { args: undefined; result: void };
   list_pet_appearances: { args: undefined; result: PetAppearanceSummary[] };
   import_pet_image: {
-    args: { state: PetAssetState; dataUrl: string };
+    args: { assetState: PetAssetState; dataUrl: string };
     result: PetAssetRecord;
   };
-  remove_pet_image: { args: { state: PetAssetState }; result: void };
+  remove_pet_image: { args: { assetState: PetAssetState }; result: void };
   get_pet_asset: {
-    args: { state: PetAssetState };
+    args: { assetState: PetAssetState };
     result: PetAssetRecord | null;
   };
   set_pet_appearance: {
@@ -108,6 +108,8 @@ const cardSchema = z.object({
   frequencyRank: nullableNumberAsZeroSchema,
   status: z.enum(["new", "learning", "review", "relearning"]),
   favorite: z.boolean(),
+  sourcePackId: z.string().optional(),
+  sourcePackName: z.string().optional(),
   lastStudiedAt: z.string().optional(),
   nextReviewAt: z.string().optional(),
   fsrs: z
@@ -188,6 +190,8 @@ const bootstrapSchema = z.object({
       packVersion: z.string(),
       compatibilityVersion: z.string(),
       recordCount: z.number(),
+      uniqueWordCount: z.number(),
+      composite: z.boolean(),
     }),
   ),
   placementComplete: z.boolean(),
@@ -197,6 +201,7 @@ const bootstrapSchema = z.object({
 const libraryPayloadSchema = z.object({
   items: z.array(cardSchema),
   counts: z.record(z.string(), z.number()),
+  hasMore: z.boolean(),
 });
 const reviewOutcomeSchema = z.object({
   card: cardSchema,
@@ -435,6 +440,8 @@ function freshDemo(): DemoState {
           packVersion: "0.1.0",
           compatibilityVersion: "1",
           recordCount: 100,
+          uniqueWordCount: 100,
+          composite: false,
         },
       ],
       placementComplete: false,
@@ -475,7 +482,18 @@ async function call<K extends keyof CommandContract>(
   command: K,
   args: CommandContract[K]["args"],
 ): Promise<CommandContract[K]["result"]> {
-  return invoke<CommandContract[K]["result"]>(command, args ?? {});
+  try {
+    return await invoke<CommandContract[K]["result"]>(command, args ?? {});
+  } catch (cause) {
+    const message =
+      typeof cause === "string"
+        ? cause
+        : cause instanceof Error
+          ? cause.message
+          : "unknown command error";
+    console.error(`[vocapip] invoke failed: ${command}`, cause);
+    throw new Error(message);
+  }
 }
 function nextDemoCard(
   state: DemoState,
@@ -599,8 +617,10 @@ export const api = {
                 )
               : card.status === status),
       ).length;
+    const start = query.offset;
+    const end = start + query.limit;
     return {
-      items: structuredClone(filtered),
+      items: structuredClone(filtered.slice(start, end)),
       counts: {
         all: count("all"),
         new: count("new"),
@@ -610,6 +630,7 @@ export const api = {
         favorite: count("favorite"),
         recent: count("recent"),
       },
+      hasMore: end < filtered.length,
     };
   },
   async toggleFavorite(cardId: string): Promise<LearningCard> {
@@ -717,18 +738,18 @@ export const api = {
   ): Promise<PetAssetRecord> {
     if (isTauri())
       return petAssetSchema.parse(
-        await call("import_pet_image", { state, dataUrl }),
+        await call("import_pet_image", { assetState: state, dataUrl }),
       );
     localStorage.setItem(`${customPetImageStorageKey}:${state}`, dataUrl);
     return { state, dataUrl };
   },
   async removePetImage(state: PetAssetState): Promise<void> {
-    if (isTauri()) return call("remove_pet_image", { state });
+    if (isTauri()) return call("remove_pet_image", { assetState: state });
     localStorage.removeItem(`${customPetImageStorageKey}:${state}`);
   },
   async getPetAsset(state: PetAssetState): Promise<PetAssetRecord | null> {
     if (isTauri()) {
-      const result = await call("get_pet_asset", { state });
+      const result = await call("get_pet_asset", { assetState: state });
       return result ? petAssetSchema.parse(result) : null;
     }
     const dataUrl = localStorage.getItem(

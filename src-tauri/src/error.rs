@@ -24,7 +24,11 @@ pub trait CommandResultExt<T> {
 
 impl<T> CommandResultExt<T> for AppResult<T> {
     fn command(self) -> Result<T, String> {
-        self.map_err(|error| error.to_string())
+        self.map_err(|error| {
+            let message = error.to_string();
+            eprintln!("[vocapip] command failed: {message}");
+            message
+        })
     }
 }
 

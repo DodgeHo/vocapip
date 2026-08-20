@@ -3,5 +3,10 @@
   "identifier": "library-window",
   "description": "The wordbook window uses only application commands",
   "windows": ["library"],
-  "permissions": []
+  "permissions": [
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-unminimize",
+    "core:window:allow-set-focus"
+  ]
 }

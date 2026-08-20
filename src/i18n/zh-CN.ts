@@ -13,6 +13,7 @@ export const zhCN = {
     saved: "已保存",
     cancel: "取消",
     close: "关闭",
+    clear: "清除",
     back: "返回",
     open: "打开",
     all: "全部",
@@ -112,6 +113,8 @@ export const zhCN = {
     lastStudied: "最近学习",
     records: "个单词",
     noExample: "暂无本地例句",
+    source: "词书来源",
+    loadMore: "加载更多",
   },
   settings: {
     title: "设置",

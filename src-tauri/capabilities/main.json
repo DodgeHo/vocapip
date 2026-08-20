@@ -3,5 +3,11 @@
   "identifier": "main-window",
   "description": "Permissions used only by the draggable desktop pet window",
   "windows": ["main"],
-  "permissions": ["core:window:allow-start-dragging"]
+  "permissions": [
+    "core:window:allow-start-dragging",
+    "core:window:allow-hide",
+    "core:window:allow-show",
+    "core:window:allow-unminimize",
+    "core:window:allow-set-focus"
+  ]
 }

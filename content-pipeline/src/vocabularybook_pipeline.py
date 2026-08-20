@@ -22,6 +22,7 @@ SOURCE_URL = "https://github.com/KyleBing/english-vocabulary"
 SOURCE_COMMIT = "66f4a6db7b61eab3534d7b84f10eed312bca4ed6"
 SOURCE_ID = "kylebing-english-vocabulary-66f4a6d"
 PACK_VERSION = "2026.08.19"
+MIN_UNIQUE_WORD_COUNT = 8000
 PACK_LICENSE = "LicenseRef-KyleBing-English-Vocabulary-Explicit-Grant"
 LICENSE_SHA256 = "86684be7e0d4efbc53c422e05cceab0031f8ebe5b0c6a32a4b042bc75971e1f1"
 SOURCE_LOCK_PATH = WORKSPACE / "source-lock.json"
@@ -237,6 +238,7 @@ def build(output_dir: Path = OUTPUT_DIR, source_dir: Path = SOURCE_DIR):
         if old.name != "bundle-resources.json":
             old.unlink()
     summaries = []
+    all_normalized_words = set()
     total_records = total_lines = 0
     for category in CATEGORIES:
         records, stats = parse_category(category, source_dir)
@@ -246,13 +248,17 @@ def build(output_dir: Path = OUTPUT_DIR, source_dir: Path = SOURCE_DIR):
         output.write_text(canonical_json(document), encoding="utf-8", newline="\n")
         total_records += stats["recordCount"]
         total_lines += stats["sourceLineCount"]
+        all_normalized_words.update(record["normalizedWord"] for record in records)
         summaries.append({"id": document["id"], "category": document["category"], "resource": name,
                           "sha256": sha256(output), "bytes": output.stat().st_size, **stats})
     shutil.copyfile(source_dir / "LICENSE", output_dir / "LICENSE")
+    unique_word_count = len(all_normalized_words)
+    if unique_word_count < MIN_UNIQUE_WORD_COUNT:
+        raise ValueError(f"normalized unique word count {unique_word_count} is below the required {MIN_UNIQUE_WORD_COUNT}")
     catalog = {
         "schemaVersion": 1, "id": "zh-CN__en.vocabularybook.catalog", "packVersion": PACK_VERSION,
         "compatibilityVersion": "2", "categoryCount": len(summaries), "sourceLineCount": total_lines,
-        "recordCount": total_records, "packLicense": PACK_LICENSE, "licenseResource": "LICENSE",
+        "recordCount": total_records, "uniqueWordCount": unique_word_count, "packLicense": PACK_LICENSE, "licenseResource": "LICENSE",
         "licenseSha256": LICENSE_SHA256, "sourceRepository": SOURCE_REPOSITORY, "sourceCommit": SOURCE_COMMIT,
         "upstreamChain": ["kajweb/dict", "KyleBing/dict", SOURCE_REPOSITORY], "categories": summaries,
     }
@@ -283,6 +289,7 @@ def validate(output_dir: Path = OUTPUT_DIR, source_dir: Path = SOURCE_DIR):
     if catalog.get("sourceCommit") != SOURCE_COMMIT or catalog.get("packLicense") != PACK_LICENSE:
         errors.append("catalog source commit or license mismatch")
     observed_total = 0
+    observed_words = set()
     for category in CATEGORIES:
         pack = load_json(output_dir / f"zh-CN-en-vocabularybook-{category.category_id}.json")
         if pack.get("schemaVersion") != 2 or pack.get("compatibilityVersion") != "2":
@@ -295,6 +302,7 @@ def validate(output_dir: Path = OUTPUT_DIR, source_dir: Path = SOURCE_DIR):
             errors.append(f"{category.category_id}: missing records")
             continue
         observed_total += len(records)
+        observed_words.update(record.get("normalizedWord") for record in records)
         ids, words = set(), set()
         for record in records:
             prefix = f"{category.category_id}/{record.get('id', 'unknown')}"
@@ -319,6 +327,10 @@ def validate(output_dir: Path = OUTPUT_DIR, source_dir: Path = SOURCE_DIR):
             errors.append(f"{category.category_id}: output is not the deterministic source parse")
     if observed_total != catalog.get("recordCount"):
         errors.append("catalog record count mismatch")
+    if catalog.get("uniqueWordCount") != len(observed_words):
+        errors.append("catalog unique word count mismatch")
+    if len(observed_words) < MIN_UNIQUE_WORD_COUNT:
+        errors.append(f"normalized unique word count below {MIN_UNIQUE_WORD_COUNT}")
     for line in (output_dir / "SHA256SUMS").read_text(encoding="ascii").splitlines():
         digest, name = line.split("  ", 1)
         if not (output_dir / name).is_file() or sha256(output_dir / name) != digest:
@@ -341,7 +353,7 @@ def main(argv=None):
     parser.add_argument("command", choices=("build", "validate", "rebuild-check", "report"))
     args = parser.parse_args(argv)
     if args.command == "build":
-        catalog = build(); print(f"built {catalog['recordCount']} records in {catalog['categoryCount']} categories"); return 0
+        catalog = build(); print(f"built {catalog['recordCount']} records / {catalog['uniqueWordCount']} unique words in {catalog['categoryCount']} categories"); return 0
     if args.command == "validate":
         errors = validate()
         if errors:
@@ -353,7 +365,7 @@ def main(argv=None):
     catalog = load_json(OUTPUT_DIR / "catalog.json")
     for category in catalog["categories"]:
         print(f"{category['category']['displayName']}: {category['recordCount']} records from {category['sourceLineCount']} lines; {category['duplicateLineCount']} duplicates")
-    print(f"total: {catalog['recordCount']} records from {catalog['sourceLineCount']} lines"); return 0
+    print(f"total: {catalog['recordCount']} records / {catalog['uniqueWordCount']} unique words from {catalog['sourceLineCount']} lines"); return 0
 
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -110,6 +110,10 @@ pub struct LearningCard {
     pub status: String,
     pub favorite: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_pack_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_pack_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub last_studied_at: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub next_review_at: Option<String>,
@@ -146,6 +150,8 @@ pub struct LanguagePackSummary {
     pub pack_version: String,
     pub compatibility_version: String,
     pub record_count: i64,
+    pub unique_word_count: i64,
+    pub composite: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -198,6 +204,14 @@ pub struct ReviewOutcome {
 pub struct LibraryQuery {
     pub search: String,
     pub status: String,
+    #[serde(default = "default_library_limit")]
+    pub limit: u32,
+    #[serde(default)]
+    pub offset: u32,
+}
+
+fn default_library_limit() -> u32 {
+    60
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -205,6 +219,7 @@ pub struct LibraryQuery {
 pub struct LibraryPayload {
     pub items: Vec<LearningCard>,
     pub counts: BTreeMap<String, i64>,
+    pub has_more: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]

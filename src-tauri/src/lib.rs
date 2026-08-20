@@ -99,18 +99,27 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if window.label() != MAIN_WINDOW {
-                return;
-            }
             if let WindowEvent::CloseRequested { api, .. } = event {
                 let exiting = window
                     .app_handle()
                     .state::<LifecycleState>()
                     .exiting
                     .load(Ordering::SeqCst);
-                if !exiting {
+                if window.label() == MAIN_WINDOW {
+                    if !exiting {
+                        api.prevent_close();
+                        if let Err(error) = window.hide() {
+                            eprintln!("[vocapip] unable to hide main window: {error}");
+                        }
+                    }
+                } else if !exiting {
                     api.prevent_close();
-                    let _ = window.hide();
+                    if let Err(error) = window.hide() {
+                        eprintln!(
+                            "[vocapip] unable to hide secondary window {}: {error}",
+                            window.label()
+                        );
+                    }
                 }
             }
         })

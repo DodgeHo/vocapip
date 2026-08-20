@@ -84,17 +84,26 @@ export function SettingsView() {
   const [licenses, setLicenses] = useState<LicenseDocument[] | null>(null);
   const [licenseOpen, setLicenseOpen] = useState(false);
   const [status, setStatus] = useState("");
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [customAssets, setCustomAssets] = useState<CustomPetAssets>({});
   const [petImageError, setPetImageError] = useState("");
+  const load = async () => {
+    setError("");
+    try {
+      const [next, assets] = await Promise.all([
+        api.bootstrap(),
+        api.getPetAssets(),
+      ]);
+      setData(next);
+      setSettings(next.settings);
+      setCustomAssets(assets);
+    } catch {
+      setError(zhCN.common.unknownError);
+    }
+  };
   useEffect(() => {
-    void Promise.all([api.bootstrap(), api.getPetAssets()])
-      .then(([next, assets]) => {
-        setData(next);
-        setSettings(next.settings);
-        setCustomAssets(assets);
-      })
-      .catch(() => setError(zhCN.common.unknownError));
+    void load();
   }, []);
   const patch = (next: Partial<AppSettings>) =>
     setSettings((current) => (current ? { ...current, ...next } : current));
@@ -113,7 +122,8 @@ export function SettingsView() {
     }
   };
   const saveSettings = async () => {
-    if (!settings) return;
+    if (!settings || saving) return;
+    setSaving(true);
     setStatus(zhCN.common.loading);
     try {
       const autostart = await api.setAutostart(settings.autostart);
@@ -129,6 +139,8 @@ export function SettingsView() {
     } catch {
       setStatus("");
       setError(zhCN.common.unknownError);
+    } finally {
+      setSaving(false);
     }
   };
   const showLicenses = async () => {
@@ -231,7 +243,20 @@ export function SettingsView() {
   if (!settings || !data)
     return (
       <AppShell active="settings">
-        <div className="list-message">{error || zhCN.common.loading}</div>
+        <div className="list-message">
+          <strong>
+            {error ? zhCN.common.unknownError : zhCN.common.loading}
+          </strong>
+          {error && (
+            <button
+              type="button"
+              className="secondary"
+              onClick={() => void load()}
+            >
+              {zhCN.common.retry}
+            </button>
+          )}
+        </div>
       </AppShell>
     );
   const pack = data.languagePacks.find(
@@ -254,7 +279,14 @@ export function SettingsView() {
           {status || zhCN.common.save}
         </button>
       </header>
-      {error && <div className="error-banner">{error}</div>}
+      {error && (
+        <div className="error-banner" role="alert">
+          <span>{error}</span>
+          <button type="button" onClick={() => void load()}>
+            {zhCN.common.retry}
+          </button>
+        </div>
+      )}
       <div className="settings-layout">
         <section className="settings-section">
           <h2>{zhCN.settings.learning}</h2>
@@ -272,7 +304,12 @@ export function SettingsView() {
                 step="5"
                 value={settings.reminderIntervalMinutes}
                 onChange={(event) =>
-                  patch({ reminderIntervalMinutes: Number(event.target.value) })
+                  patch({
+                    reminderIntervalMinutes: Math.min(
+                      240,
+                      Math.max(10, Number(event.target.value) || 10),
+                    ),
+                  })
                 }
               />
               <span>{zhCN.settings.minutes}</span>
@@ -290,7 +327,12 @@ export function SettingsView() {
                 max="100"
                 value={settings.dailyQuota}
                 onChange={(event) =>
-                  patch({ dailyQuota: Number(event.target.value) })
+                  patch({
+                    dailyQuota: Math.min(
+                      100,
+                      Math.max(1, Number(event.target.value) || 1),
+                    ),
+                  })
                 }
               />
               <span>{zhCN.settings.words}</span>
@@ -505,11 +547,10 @@ export function SettingsView() {
               <label htmlFor="pack">{zhCN.settings.languagePack}</label>
               {pack && (
                 <p>
-                  {zhCN.settings.packRecords.replace(
-                    "{count}",
-                    String(pack.recordCount),
-                  )}{" "}
-                  · {pack.sourceLanguage} → {pack.targetLanguage}
+                  {pack.composite ? "全部词库" : pack.name}·{" "}
+                  {pack.recordCount.toLocaleString("zh-CN")} 条记录 ·{" "}
+                  {pack.uniqueWordCount.toLocaleString("zh-CN")} 个独立单词 ·{" "}
+                  {pack.sourceLanguage} → {pack.targetLanguage}
                 </p>
               )}
             </div>

@@ -168,6 +168,8 @@ describe("library and settings", () => {
       frequencyRank: 0,
       status: "new" as const,
       favorite: false,
+      sourcePackId: "zh-CN__en.vocabularybook.middle-school",
+      sourcePackName: "初中英语词汇",
     };
     vi.spyOn(api, "listLibrary").mockResolvedValue({
       items: [card],
@@ -180,10 +182,62 @@ describe("library and settings", () => {
         favorite: 0,
         recent: 0,
       },
+      hasMore: false,
     });
 
     render(<LibraryView />);
     expect((await screen.findAllByText("暂无本地例句")).length).toBe(2);
+    expect(await screen.findByText("词书来源 · 初中英语词汇")).toBeTruthy();
+  });
+
+  it("loads the library in bounded pages", async () => {
+    const user = userEvent.setup();
+    const firstCard = {
+      id: "card:first",
+      word: "first",
+      partOfSpeech: "adj.",
+      definitionZh: "第一个",
+      exampleEn: "The first page is ready.",
+      exampleZh: "第一页准备好了。",
+      tier: "T1" as const,
+      frequencyRank: 1,
+      status: "new" as const,
+      favorite: false,
+    };
+    const secondCard = {
+      ...firstCard,
+      id: "card:second",
+      word: "second",
+      definitionZh: "第二个",
+      frequencyRank: 2,
+    };
+    const counts = {
+      all: 2,
+      new: 2,
+      learning: 0,
+      review: 0,
+      relearning: 0,
+      favorite: 0,
+      recent: 0,
+    };
+    const listLibrary = vi
+      .spyOn(api, "listLibrary")
+      .mockResolvedValueOnce({ items: [firstCard], counts, hasMore: true })
+      .mockResolvedValueOnce({ items: [secondCard], counts, hasMore: false });
+
+    render(<LibraryView />);
+    expect(await screen.findByText("first")).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "加载更多" }));
+    expect(await screen.findByText("second")).toBeTruthy();
+    expect(listLibrary).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ limit: 60, offset: 0 }),
+    );
+    expect(listLibrary).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ limit: 60, offset: 1 }),
+    );
+    expect(screen.queryByRole("button", { name: "加载更多" })).toBeNull();
   });
 
   it("keeps speech and appearance settings in the editable settings model", async () => {

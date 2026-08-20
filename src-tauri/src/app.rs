@@ -3,11 +3,13 @@ use crate::error::{AppError, AppResult};
 use crate::repository;
 use chrono::{DateTime, Duration as ChronoDuration, Local, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use std::time::{Duration, Instant};
 use tauri::menu::{CheckMenuItem, Menu, MenuEvent, MenuItem};
 use tauri::tray::TrayIconBuilder;
+use tauri::webview::PageLoadEvent;
 use tauri::{
     App, AppHandle, Emitter, LogicalSize, Manager, PhysicalPosition, WebviewUrl,
     WebviewWindowBuilder,
@@ -99,6 +101,48 @@ struct PetActionEvent<'a> {
 #[derive(Default)]
 pub struct LifecycleState {
     pub exiting: AtomicBool,
+    secondary_ready: Mutex<HashSet<String>>,
+    secondary_pending: Mutex<HashSet<String>>,
+}
+
+fn log_secondary(message: impl AsRef<str>) {
+    eprintln!("{}", message.as_ref());
+}
+
+impl LifecycleState {
+    fn set_secondary_ready(&self, label: &str, ready: bool) {
+        if let Ok(mut labels) = self.secondary_ready.lock() {
+            if ready {
+                labels.insert(label.to_string());
+            } else {
+                labels.remove(label);
+            }
+        }
+    }
+
+    fn is_secondary_ready(&self, label: &str) -> bool {
+        self.secondary_ready
+            .lock()
+            .map(|labels| labels.contains(label))
+            .unwrap_or(false)
+    }
+
+    fn set_secondary_pending(&self, label: &str, pending: bool) {
+        if let Ok(mut labels) = self.secondary_pending.lock() {
+            if pending {
+                labels.insert(label.to_string());
+            } else {
+                labels.remove(label);
+            }
+        }
+    }
+
+    fn is_secondary_pending(&self, label: &str) -> bool {
+        self.secondary_pending
+            .lock()
+            .map(|labels| labels.contains(label))
+            .unwrap_or(false)
+    }
 }
 
 impl PetSurfaceMode {
@@ -315,10 +359,16 @@ pub fn toggle_main_window(app: &AppHandle) -> AppResult<()> {
     Ok(())
 }
 
-pub fn open_or_focus_window(app: &AppHandle, view: &str) -> AppResult<()> {
-    if view == "pet" {
-        return show_main_window(app);
-    }
+#[derive(Debug, Clone, PartialEq)]
+struct SecondaryWindowSpec {
+    label: &'static str,
+    title: &'static str,
+    url: String,
+    width: f64,
+    height: f64,
+}
+
+fn secondary_window_spec(view: &str) -> AppResult<SecondaryWindowSpec> {
     let (label, title, width, height) = match view {
         "library" => ("library", "VocaPip - Word Library", 980.0, 720.0),
         "settings" => ("settings", "VocaPip - Settings", 760.0, 700.0),
@@ -328,22 +378,126 @@ pub fn open_or_focus_window(app: &AppHandle, view: &str) -> AppResult<()> {
             )))
         }
     };
-    if let Some(window) = app.get_webview_window(label) {
+    Ok(SecondaryWindowSpec {
+        label,
+        title,
+        url: format!("index.html?view={view}"),
+        width,
+        height,
+    })
+}
+
+pub fn open_or_focus_window(app: &AppHandle, view: &str) -> AppResult<()> {
+    if view == "pet" {
+        return show_main_window(app);
+    }
+    let spec = secondary_window_spec(view)?;
+    if let Some(window) = app.get_webview_window(spec.label) {
+        log_secondary(format!("[vocapip] reusing {} window", spec.label));
+        if !app.state::<LifecycleState>().is_secondary_ready(spec.label) {
+            log_secondary(format!(
+                "[vocapip] {} window is still loading; keeping it hidden",
+                spec.label
+            ));
+            return Ok(());
+        }
         window.show()?;
         window.unminimize()?;
         window.set_focus()?;
         return Ok(());
     }
-    WebviewWindowBuilder::new(
-        app,
-        label,
-        WebviewUrl::App(format!("index.html?view={view}").into()),
-    )
-    .title(title)
-    .inner_size(width, height)
-    .min_inner_size(640.0, 520.0)
-    .resizable(true)
-    .build()?;
+
+    let lifecycle = app.state::<LifecycleState>();
+    if lifecycle.is_secondary_pending(spec.label) {
+        log_secondary(format!(
+            "[vocapip] {} window creation is already in progress",
+            spec.label
+        ));
+        return Ok(());
+    }
+
+    // Webview2 can deadlock when a WebviewWindowBuilder is used directly from
+    // a synchronous command or menu callback on Windows. Build the window on
+    // a worker thread, then let the page-load callback publish readiness.
+    lifecycle.set_secondary_pending(spec.label, true);
+    let app_handle = app.clone();
+    std::thread::spawn(move || {
+        log_secondary(format!(
+            "[vocapip] creating {} window with {}",
+            spec.label, spec.url
+        ));
+        let result = WebviewWindowBuilder::new(
+            &app_handle,
+            spec.label,
+            WebviewUrl::App(spec.url.clone().into()),
+        )
+        .title(spec.title)
+        .inner_size(spec.width, spec.height)
+        .min_inner_size(640.0, 520.0)
+        .resizable(true)
+        // Create the native HWND in the normal visible state. We hide it just
+        // after build returns, once the native host has its requested size;
+        // hiding during builder initialization can leave WebView2 with a
+        // zero-sized host on Windows.
+        .visible(true)
+        .on_page_load(|window, payload| match payload.event() {
+            PageLoadEvent::Started => {
+                window
+                    .app_handle()
+                    .state::<LifecycleState>()
+                    .set_secondary_ready(window.label(), false);
+                log_secondary(format!("[vocapip] page load started: {}", payload.url()));
+            }
+            PageLoadEvent::Finished => {
+                log_secondary(format!("[vocapip] page load finished: {}", payload.url()));
+                let lifecycle = window.app_handle().state::<LifecycleState>();
+                lifecycle.set_secondary_ready(window.label(), true);
+                lifecycle.set_secondary_pending(window.label(), false);
+                if let Err(error) = window.show() {
+                    log_secondary(format!("[vocapip] unable to show loaded window: {error}"));
+                }
+                if let Err(error) = window.set_focus() {
+                    log_secondary(format!("[vocapip] unable to focus loaded window: {error}"));
+                }
+            }
+        })
+        .build();
+
+        match result {
+            Ok(window) => {
+                log_secondary(format!(
+                    "[vocapip] created {} window; waiting for page load before focusing",
+                    spec.label
+                ));
+                let label = spec.label.to_string();
+                let window_for_hide = window.clone();
+                let app_for_hide = app_handle.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(Duration::from_millis(80));
+                    if !app_for_hide
+                        .state::<LifecycleState>()
+                        .is_secondary_ready(&label)
+                    {
+                        if let Err(error) = window_for_hide.hide() {
+                            log_secondary(format!(
+                                "[vocapip] unable to hide loading {} window: {error}",
+                                label
+                            ));
+                        }
+                    }
+                });
+            }
+            Err(error) => {
+                app_handle
+                    .state::<LifecycleState>()
+                    .set_secondary_pending(spec.label, false);
+                log_secondary(format!(
+                    "[vocapip] unable to create {} window at {}: {error}",
+                    spec.label, spec.url
+                ));
+            }
+        }
+    });
     Ok(())
 }
 
@@ -608,6 +762,31 @@ mod tests {
             pet_appearance_id: "mint".into(),
             quiet_mode_until: None,
         }
+    }
+
+    #[test]
+    fn secondary_window_specs_use_stable_view_urls() {
+        let library = secondary_window_spec("library").unwrap();
+        assert_eq!(library.label, "library");
+        assert_eq!(library.url, "index.html?view=library");
+        assert_eq!((library.width, library.height), (980.0, 720.0));
+
+        let settings = secondary_window_spec("settings").unwrap();
+        assert_eq!(settings.label, "settings");
+        assert_eq!(settings.url, "index.html?view=settings");
+        assert_eq!((settings.width, settings.height), (760.0, 700.0));
+
+        assert!(secondary_window_spec("unknown").is_err());
+    }
+
+    #[test]
+    fn secondary_window_readiness_tracks_page_lifecycle() {
+        let lifecycle = LifecycleState::default();
+        assert!(!lifecycle.is_secondary_ready("settings"));
+        lifecycle.set_secondary_ready("settings", true);
+        assert!(lifecycle.is_secondary_ready("settings"));
+        lifecycle.set_secondary_ready("settings", false);
+        assert!(!lifecycle.is_secondary_ready("settings"));
     }
 
     #[test]
